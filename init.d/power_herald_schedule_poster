@@ -1,0 +1,38 @@
+#!/sbin/openrc-run
+# OpenRC init script for power_herald_schedule_poster
+# Place in /etc/init.d/power_herald_schedule_poster
+
+description="Power Herald Daily Schedule Poster"
+command="/opt/power_herald/venv/bin/python"
+command_args="-m src.schedule_poster"
+pidfile="/var/run/power_herald_schedule_poster.pid"
+user="power_herald"
+group="power_herald"
+directory="/opt/power_herald"
+
+depend() {
+    need net
+}
+
+start_pre() {
+    if [ ! -d "$directory" ]; then
+        eerror "Directory $directory does not exist"
+        return 1
+    fi
+}
+
+start() {
+    ebegin "Starting Power Herald Schedule Poster"
+    cd "$directory"
+    start-stop-daemon --start --pidfile "$pidfile" \
+        --user "$user" --group "$group" \
+        --make-pidfile --background \
+        --exec "$command" -- $command_args
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping Power Herald Schedule Poster"
+    start-stop-daemon --stop --pidfile "$pidfile"
+    eend $?
+}

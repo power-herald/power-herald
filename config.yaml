@@ -1,0 +1,47 @@
+telegram:
+  token: "YOUR_BOT_TOKEN"
+  webhook_url: "https://your.domain/webhook"
+  webhook_path: "/webhook"
+  webhook_port: 8080
+
+database:
+  driver: "mysql+pymysql"
+  host: "localhost"
+  port: 3306
+  user: "power_herald"
+  password: "YOUR_DB_PASSWORD"
+  database: "power_herald"
+
+admin:
+  chat_ids: ["123456789", "987654321"]
+
+probing:
+  passive:
+    enabled: true
+    interval_seconds: 30
+    timeout_seconds: 5
+  active:
+    enabled: true
+    port: 8081
+    endpoint: "/active_ping"
+
+outages:
+  json_url: "https://raw.githubusercontent.com/Baskerville42/outage-data-ua/main/data/outages.json"
+  daily_post_time: "07:00"
+  daily_post_enabled: true
+
+maintenance:
+  default_enabled: false
+  comment: "Scheduled maintenance"
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+buildings:
+  - id: "building_001"
+    name: "Building A"
+    chat_id: "123456789"
+  - id: "building_002"
+    name: "Building B"
+    chat_id: "987654321"
