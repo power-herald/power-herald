@@ -3,12 +3,29 @@ import logging
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from src.models import PowerSource, PowerStateChange, OutagePeriod, StateChangeType, Base
-import datetime
+from src.config import get_config
 
-# Placeholder DB URL, replace with config
-DB_URL = "mysql+pymysql://user:password@localhost/power_herald"
-engine = create_engine(DB_URL)
+config = get_config()
+engine = create_engine(config.db_url)
 Session = sessionmaker(bind=engine)
+
+def record_outage_transition(session, source_id: int, state: StateChangeType, timestamp):
+    if state == StateChangeType.OFFLINE:
+        open_period = session.query(OutagePeriod).filter_by(
+            source_id=source_id, finished_at=None
+        ).first()
+        if open_period is None:
+            session.add(OutagePeriod(
+                source_id=source_id,
+                started_at=timestamp,
+                state=state
+            ))
+    elif state == StateChangeType.ONLINE:
+        open_period = session.query(OutagePeriod).filter_by(
+            source_id=source_id, finished_at=None
+        ).order_by(OutagePeriod.started_at.desc()).first()
+        if open_period is not None:
+            open_period.finished_at = timestamp
 
 def update_outage_periods():
     session = Session()
@@ -17,7 +34,7 @@ def update_outage_periods():
         state_changes = session.query(PowerStateChange).filter_by(source_id=source.id).order_by(PowerStateChange.timestamp.asc()).all()
         last_period = None
         for sc in state_changes:
-            if sc.state in [StateChangeType.OFFLINE, StateChangeType.UNSTABLE]:
+            if sc.state == StateChangeType.OFFLINE:
                 if not last_period or last_period.finished_at is not None:
                     # Start new outage period
                     last_period = OutagePeriod(

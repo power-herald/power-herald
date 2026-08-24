@@ -2,6 +2,9 @@
 import yaml
 import os
 from typing import Dict, Any
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class Config:
     def __init__(self, config_path: str = "config.yaml"):
@@ -26,15 +29,23 @@ class Config:
 
     @property
     def bot_token(self) -> str:
-        return self.get("telegram.token")
+        return os.getenv("BOT_TOKEN") or self.get("telegram.token")
 
     @property
     def webhook_url(self) -> str:
-        return self.get("telegram.webhook_url")
+        return os.getenv("WEBHOOK_URL") or self.get("telegram.webhook_url")
+
+    @property
+    def webhook_secret(self) -> str:
+        return os.getenv("WEBHOOK_SECRET") or self.get("telegram.webhook_secret")
 
     @property
     def webhook_path(self) -> str:
         return self.get("telegram.webhook_path", "/webhook")
+
+    @property
+    def webhook_address(self) -> str:
+        return self.get("telegram.webhook_address", "0.0.0.0")
 
     @property
     def webhook_port(self) -> int:
@@ -47,7 +58,11 @@ class Config:
 
     @property
     def admin_chat_ids(self) -> list:
-        ids = self.get("admin.chat_ids", [])
+        ids = os.getenv("ADMIN_CHAT_IDS")
+        if ids:
+            ids = [id.strip() for id in ids.split(",")]
+        else:
+            ids = self.get("admin.chat_ids", [])
         return [str(i) for i in ids]
 
     @property
@@ -57,6 +72,24 @@ class Config:
     @property
     def passive_probe_interval(self) -> int:
         return self.get("probing.passive.interval_seconds", 30)
+
+    @property
+    def passive_probe_timeout(self) -> int:
+        return self.get("probing.passive.timeout_seconds", 2)
+
+    @property
+    def passive_probe_count(self) -> int:
+        count = self.get("probing.passive.probe_count", 3)
+        if not isinstance(count, int) or count < 1:
+            raise ValueError("probing.passive.probe_count must be a positive integer")
+        return count
+
+    @property
+    def passive_probe_method(self) -> str:
+        method = self.get("probing.passive.method", "http").lower()
+        if method not in {"http", "ping3"}:
+            raise ValueError("probing.passive.method must be either 'http' or 'ping3'")
+        return method
 
     @property
     def active_probe_enabled(self) -> bool:

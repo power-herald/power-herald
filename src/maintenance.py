@@ -2,11 +2,10 @@
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from src.models import MaintenanceMode, PowerSource, Base
-import os
+from src.config import get_config
 
-# Placeholder DB URL, replace with config
-DB_URL = "mysql+pymysql://user:password@localhost/power_herald"
-engine = create_engine(DB_URL)
+config = get_config()
+engine = create_engine(config.db_url)
 Session = sessionmaker(bind=engine)
 
 def is_maintenance(source_id=None):

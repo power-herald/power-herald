@@ -65,12 +65,13 @@ sudo nano /etc/power_herald/config.yaml
 # Create database and user
 mysql -u root -p -e "
 CREATE DATABASE power_herald CHARACTER SET utf8mb4;
-CREATE USER 'power_herald'@'localhost' IDENTIFIED BY 'strong_password';
+CREATE USER 'power_herald'@'localhost' IDENTIFIED BY 'power_herald';
 GRANT ALL PRIVILEGES ON power_herald.* TO 'power_herald'@'localhost';
 FLUSH PRIVILEGES;
 "
 
-# Create tables (ORM will do this on first run, or use schema.sql if provided)
+# Create tables from the SQLAlchemy model schema
+mysql -u root -p < schema.sql
 ```
 
 ### 5. Setup Reverse Proxy (Nginx)
@@ -149,6 +150,9 @@ INSERT INTO power_sources (name, type, address, enabled, description, work_durat
   ('Line A', 'PASSIVE', 'http://192.168.1.10:8000', 1, 'Main city power line', 240, 60),
   ('Generator 1', 'GENERATOR', 'N/A', 1, 'Backup generator', 240, 60);
 ```
+
+For ICMP probing, set `probing.passive.method` to `"ping3"` in `config.yaml` and
+store a hostname or IP address for the passive source instead of an HTTP URL.
 
 ### 2. Create Chat Subscriptions
 

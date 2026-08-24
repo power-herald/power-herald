@@ -1,14 +1,7 @@
-# Requirements File
-
-```
 aiogram==3.30.0
 aiohttp==3.14.3
+ping3==4.0.8
 sqlalchemy==2.0.52
 pymysql==1.2.0
 pyyaml==6.0.3
-```
-
-Save as `requirements.txt` and install with:
-```bash
-pip install -r requirements.txt
-```
+python-dotenv==1.2.3

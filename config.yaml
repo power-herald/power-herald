@@ -3,23 +3,27 @@ telegram:
   webhook_url: "https://your.domain/webhook"
   webhook_path: "/webhook"
   webhook_port: 8080
+  webhook_address: "0.0.0.0"
+  webhook_secret: "YOUR_WEBHOOK_SECRET"
 
 database:
   driver: "mysql+pymysql"
   host: "localhost"
   port: 3306
   user: "power_herald"
-  password: "YOUR_DB_PASSWORD"
+  password: "power_herald"
   database: "power_herald"
 
 admin:
-  chat_ids: ["123456789", "987654321"]
+  chat_ids: ["YOUR_ADMIN_CHAT_ID_1", "YOUR_ADMIN_CHAT_ID_2"]
 
 probing:
   passive:
     enabled: true
-    interval_seconds: 30
-    timeout_seconds: 5
+    method: "ping3"  # "http" or "ping3"
+    interval_seconds: 10
+    timeout_seconds: 1
+    probe_count: 3
   active:
     enabled: true
     port: 8081

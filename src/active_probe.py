@@ -1,14 +1,17 @@
 # src/active_probe.py
+import asyncio
 import logging
+import signal
 from aiohttp import web
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from src.models import PowerSource, PowerSourceType, PowerStateChange, StateChangeType, Base
 import datetime
+from src.config import get_config
+from src.outage_periods import record_outage_transition
 
-# Placeholder DB URL, replace with config
-DB_URL = "mysql+pymysql://user:password@localhost/power_herald"
-engine = create_engine(DB_URL)
+config = get_config()
+engine = create_engine(config.db_url)
 Session = sessionmaker(bind=engine)
 
 async def handle_active_ping(request):
@@ -34,12 +37,13 @@ async def handle_active_ping(request):
     if not last_state or last_state.state != state_enum:
         state_change = PowerStateChange(source_id=source.id, state=state_enum, timestamp=datetime.datetime.utcnow())
         session.add(state_change)
+        record_outage_transition(session, source.id, state_enum, state_change.timestamp)
         session.commit()
         logging.info(f"Active state changed for {source.name}: {state_enum.value}")
         try:
             import asyncio
             from src.notify import notify_state_change
-            asyncio.create_task(notify_state_change(state_change))
+            asyncio.create_task(notify_state_change(state_change.source_id, state_change.state, state_change.timestamp))
         except Exception as e:
             logging.warning(f"Notification failed: {e}")
     session.close()
@@ -50,7 +54,24 @@ def create_app():
     app.router.add_post("/active_ping", handle_active_ping)
     return app
 
+async def main():
+    stop_event = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    for shutdown_signal in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(shutdown_signal, stop_event.set)
+
+    app = create_app()
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", 8081)
+    try:
+        await site.start()
+        logging.info("Active probe started on port 8081")
+        await stop_event.wait()
+        logging.info("Shutdown signal received")
+    finally:
+        await runner.cleanup()
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    app = create_app()
-    web.run_app(app, port=8081)
+    asyncio.run(main())

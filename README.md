@@ -63,7 +63,6 @@ cp config.yaml.example config.yaml
 3. **Database**:
 ```bash
 mysql -u root -p < schema.sql
-# Or run ORM migrations if available
 ```
 
 4. **OpenRC installation** (see OPENRC_SETUP.md):
@@ -95,6 +94,7 @@ admin:
 
 probing:
   passive:
+    method: "http"  # "http" or "ping3"
     interval_seconds: 30
     timeout_seconds: 5
   active:
@@ -119,7 +119,8 @@ See `config.yaml` for all available options.
 ### Power Source Types
 
 #### 1. Passive (Bot pings device)
-- Bot periodically pings device at configured URL
+- Bot periodically checks the device using HTTP GET or ICMP, selected by `probing.passive.method`
+- Use `method: "http"` with a URL, or `method: "ping3"` with a hostname/IP
 - State: ONLINE/OFFLINE
 - Use case: Grid power lines, always-on devices
 

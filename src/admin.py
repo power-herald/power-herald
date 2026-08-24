@@ -6,13 +6,12 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from src.models import Chat, PowerSource, MaintenanceMode, Subscription, Base
 import os
+from src.config import get_config
 
-# Placeholder DB URL, replace with config
-DB_URL = "mysql+pymysql://user:password@localhost/power_herald"
-engine = create_engine(DB_URL)
+config = get_config()
+engine = create_engine(config.db_url)
 Session = sessionmaker(bind=engine)
 
-ADMIN_CHAT_IDS = os.getenv("ADMIN_CHAT_IDS", "123456789").split(",")  # Comma-separated
 router = Router()
 
 @router.message(Command("activate"))
@@ -25,14 +24,14 @@ async def activate_cmd(message: types.Message):
         session.add(chat)
         session.commit()
     # Notify admin
-    for admin_id in ADMIN_CHAT_IDS:
+    for admin_id in config.admin_chat_ids:
         await message.bot.send_message(admin_id, f"Activation requested for chat: {chat.title} ({chat_id})")
     await message.answer("Activation request sent to admin.")
     session.close()
 
 @router.message(Command("approve"))
 async def approve_cmd(message: types.Message):
-    if str(message.chat.id) not in ADMIN_CHAT_IDS:
+    if str(message.chat.id) not in config.admin_chat_ids:
         await message.answer("Not authorized.")
         return
     args = message.text.split()
@@ -53,7 +52,7 @@ async def approve_cmd(message: types.Message):
 
 @router.message(Command("maintenance"))
 async def maintenance_cmd(message: types.Message):
-    if str(message.chat.id) not in ADMIN_CHAT_IDS:
+    if str(message.chat.id) not in config.admin_chat_ids:
         await message.answer("Not authorized.")
         return
     # Example: /maintenance <source_id> <on|off> [comment]
@@ -70,7 +69,7 @@ async def maintenance_cmd(message: types.Message):
 
 @router.message(Command("generator"))
 async def generator_cmd(message: types.Message):
-    if str(message.chat.id) not in ADMIN_CHAT_IDS:
+    if str(message.chat.id) not in config.admin_chat_ids:
         await message.answer("Not authorized.")
         return
     # /generator <source_id> <on|off> to enable/disable generator notifications for this chat

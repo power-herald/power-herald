@@ -5,6 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from src.models import PowerSource, PowerSourceType, PowerStateChange, StateChangeType
 from src.notify import notify_state_change
+from src.outage_periods import record_outage_transition
 import asyncio
 import datetime
 
@@ -39,12 +40,13 @@ async def handle_generator_command(request):
             timestamp=datetime.datetime.utcnow()
         )
         session.add(state_change)
+        record_outage_transition(session, source.id, new_state, state_change.timestamp)
         session.commit()
         logging.info(f"Generator {source.name} command: {command}")
         
         # Trigger notifications
         try:
-            asyncio.create_task(notify_state_change(state_change))
+            asyncio.create_task(notify_state_change(state_change.source_id, state_change.state, state_change.timestamp))
         except Exception as e:
             logging.warning(f"Notification failed: {e}")
     
