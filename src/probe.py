@@ -2,12 +2,14 @@
 import asyncio
 import logging
 import signal
+import socket
+from urllib.parse import urlsplit
 import aiohttp
 import sys
 from ping3 import ping
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from src.models import PowerSource, PowerSourceType, PowerStateChange, StateChangeType, Base
+from src.models import PingMethod, PowerSource, PowerSourceType, PowerStateChange, StateChangeType, Base
 import datetime
 from src.config import get_config
 from src.maintenance import is_maintenance
@@ -19,12 +21,25 @@ engine = create_engine(config.db_url)
 Session = sessionmaker(bind=engine)
 notification_tasks = set()
 
-async def ping_host(address: str, timeout_sec: int, method: str = "http") -> bool:
-    """Check whether an address is reachable using HTTP GET or ICMP."""
+async def ping_host(address: str, timeout_sec: int, method: PingMethod = PingMethod.HTTP) -> bool:
+    """Check whether an address is reachable using the source's probe method."""
     try:
-        if method == "ping3":
+        if isinstance(method, str):
+            method = PingMethod(method.lower())
+
+        if method == PingMethod.PING:
             result = await asyncio.to_thread(ping, address, timeout=timeout_sec)
             return result is not None and result is not False
+
+        if method == PingMethod.TCP:
+            endpoint = urlsplit(address if "://" in address else f"//{address}")
+            if endpoint.hostname is None or endpoint.port is None:
+                raise ValueError("TCP address must include a host and port")
+            connection = await asyncio.to_thread(
+                socket.create_connection, (endpoint.hostname, endpoint.port), timeout_sec
+            )
+            with connection:
+                return True
 
         request_timeout = aiohttp.ClientTimeout(total=timeout_sec)
         async with aiohttp.ClientSession() as session:
@@ -78,7 +93,7 @@ async def probe_passive_sources():
 
             for _ in range(config.passive_probe_count):
                 is_online = await ping_host(
-                    source.address, config.passive_probe_timeout, config.passive_probe_method
+                    source.address, config.passive_probe_timeout, source.ping_method
                 )
                 result = StateChangeType.ONLINE if is_online else StateChangeType.OFFLINE
                 results.append(result)
@@ -91,6 +106,7 @@ async def probe_passive_sources():
                             session, source.id, StateChangeType.UNSTABLE,
                             datetime.datetime.now(datetime.timezone.utc)
                         )
+                        logging.info(f"State is UNSTABLE for {source.name}")
 
             if first_result is None:
                 continue

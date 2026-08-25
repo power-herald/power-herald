@@ -17,12 +17,18 @@ class PowerSourceType(enum.Enum):
     PASSIVE = "passive"     # Bot pings device
     GENERATOR = "generator" # Generator (manual activation, maintenance scheduling)
 
+class PingMethod(enum.Enum):
+    HTTP = "http"
+    PING = "ping"
+    TCP = "tcp"
+
 class PowerSource(Base):
     __tablename__ = 'power_sources'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     type: Mapped[PowerSourceType] = mapped_column(Enum(PowerSourceType), nullable=False)
     address: Mapped[str] = mapped_column(String(256), nullable=False)  # IP or URL
+    ping_method: Mapped[PingMethod] = mapped_column(Enum(PingMethod), nullable=False, default=PingMethod.PING)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     description: Mapped[str | None] = mapped_column(Text)
     # Generator-specific config
@@ -48,7 +54,7 @@ class OutagePeriod(Base):
     source_id: Mapped[int] = mapped_column(ForeignKey('power_sources.id'), nullable=False)
     started_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     finished_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    state: Mapped[StateChangeType] = mapped_column(Enum(StateChangeType), nullable=False)  # OFFLINE/UNSTABLE
+    state: Mapped[StateChangeType] = mapped_column(Enum(StateChangeType), nullable=False)  # ONLINE/OFFLINE
     source: Mapped[PowerSource] = relationship()
 
 class Chat(Base):

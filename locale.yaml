@@ -1,0 +1,32 @@
+bot:
+  greeting: "Hello! This is a Power Herald bot.\nChat ID is: {chat_id}\nThread ID is: {thread_id}"
+  usage:
+    approve: "Usage: /approve <chat_id>"
+    maintenance: "Usage: /maintenance <source_id|global> <on|off> [comment]"
+    generator: "Usage: /generator <source_id> <on|off>"
+
+admin:
+  activation_requested: "Activation requested for chat: {title} ({chat_id})"
+  activation_request_sent: "Activation request sent to admin."
+  not_authorized: "Not authorized."
+  chat_activated: "Chat {title} ({chat_id}) activated."
+  chat_activated_for_user: "Your chat is now activated!"
+  chat_not_found: "Chat not found."
+  maintenance_status: "Maintenance {status} for {scope}."
+  generator_not_found: "Generator source not found."
+  generator_status: "⚠️ Generator notifications for {source_name} set to {status}."
+
+notification:
+  online: "✅ Електропостачання відновлено для {source_name}"
+  offline: "❌ Електропостачання перервано для {source_name}"
+  state: "{source_name}: {state}"
+  online_duration: "⏱ Світла не було {duration}"
+  offline_duration: "⏱ Світло було {duration}"
+  previous_period: "⏱ Попередній період: {duration}"
+  maintenance_window: "⏱ Технічна перерва {start} - {end}"
+  next_working_window: "⏱ Кінець технічної перерви {start}"
+
+schedule:
+  outages: "⏱ Відключення для {date}:"
+  outage_period: "  {start} - {end}"
+  no_outages: "⏱ Немає відключень для {date}."

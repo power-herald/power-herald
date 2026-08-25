@@ -10,22 +10,20 @@ engine = create_engine(config.db_url)
 Session = sessionmaker(bind=engine)
 
 def record_outage_transition(session, source_id: int, state: StateChangeType, timestamp):
-    if state == StateChangeType.OFFLINE:
-        open_period = session.query(OutagePeriod).filter_by(
-            source_id=source_id, finished_at=None
-        ).first()
-        if open_period is None:
-            session.add(OutagePeriod(
-                source_id=source_id,
-                started_at=timestamp,
-                state=state
-            ))
-    elif state == StateChangeType.ONLINE:
-        open_period = session.query(OutagePeriod).filter_by(
-            source_id=source_id, finished_at=None
-        ).order_by(OutagePeriod.started_at.desc()).first()
-        if open_period is not None:
-            open_period.finished_at = timestamp
+    if state not in (StateChangeType.ONLINE, StateChangeType.OFFLINE):
+        return
+
+    open_period = session.query(OutagePeriod).filter_by(
+        source_id=source_id, finished_at=None
+    ).order_by(OutagePeriod.started_at.desc()).first()
+    if open_period is not None:
+        open_period.finished_at = timestamp
+
+    session.add(OutagePeriod(
+        source_id=source_id,
+        started_at=timestamp,
+        state=state
+    ))
 
 def update_outage_periods():
     session = Session()

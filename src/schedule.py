@@ -3,6 +3,7 @@ import json
 import datetime
 import requests
 from typing import List
+from src.messages import schedule_message
 
 # Example usage: python src/schedule.py <building_id>
 # This script fetches pregenerated outage JSON and formats outages for today and tomorrow
@@ -22,12 +23,7 @@ def format_outages_for_building(building_id: str, outages: List[dict]) -> str:
     for day in [today, tomorrow]:
         day_str = day.strftime("%Y-%m-%d")
         day_outages = [o for o in outages if o.get("building_id") == building_id and o.get("date") == day_str]
-        if day_outages:
-            result.append(f"Outages for {day_str}:")
-            for o in day_outages:
-                result.append(f"  {o['start']} - {o['end']}")
-        else:
-            result.append(f"No outages for {day_str}.")
+        result.append(schedule_message(day_str, day_outages))
     return "\n".join(result)
 
 if __name__ == "__main__":

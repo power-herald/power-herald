@@ -7,6 +7,7 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 from aiohttp import web
 import asyncio
 from src.config import get_config
+from src.messages import bot_greeting
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 config = get_config()
@@ -23,7 +24,7 @@ except Exception as e:
 
 @dp.message()
 async def echo_handler(message: types.Message):
-    await message.answer("Hello! This is a Power Herald bot.\nChat ID is: " + str(message.chat.id) + "\nThread ID is: " + str(message.message_thread_id))
+    await message.answer(bot_greeting(message.chat.id, message.message_thread_id))
 
 async def on_startup(app):
     await bot.set_webhook(config.webhook_url)

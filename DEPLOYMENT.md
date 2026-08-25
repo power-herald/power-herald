@@ -146,13 +146,19 @@ curl -I https://your.domain/webhook
 Login to MySQL and add power sources:
 
 ```sql
-INSERT INTO power_sources (name, type, address, enabled, description, work_duration_minutes, maintenance_duration_minutes) VALUES
-  ('Line A', 'PASSIVE', 'http://192.168.1.10:8000', 1, 'Main city power line', 240, 60),
-  ('Generator 1', 'GENERATOR', 'N/A', 1, 'Backup generator', 240, 60);
+INSERT INTO power_sources (name, type, address, ping_method, enabled, description, work_duration_minutes, maintenance_duration_minutes) VALUES
+  ('Line A', 'PASSIVE', 'http://192.168.1.10:8000', 'HTTP', 1, 'Main city power line', 240, 60),
+  ('Generator 1', 'GENERATOR', 'N/A', 'HTTP', 1, 'Backup generator', 240, 60);
 ```
 
-For ICMP probing, set `probing.passive.method` to `"ping3"` in `config.yaml` and
-store a hostname or IP address for the passive source instead of an HTTP URL.
+For existing databases, add the column before inserting sources:
+
+```sql
+ALTER TABLE power_sources ADD COLUMN ping_method ENUM('HTTP', 'PING3', 'TCP') NOT NULL DEFAULT 'HTTP';
+```
+
+Set `ping_method` to `PING3` with a hostname/IP, or `TCP` with a `host:port`
+address (the `tcp://host:port` form is also accepted).
 
 ### 2. Create Chat Subscriptions
 

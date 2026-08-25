@@ -85,13 +85,6 @@ class Config:
         return count
 
     @property
-    def passive_probe_method(self) -> str:
-        method = self.get("probing.passive.method", "http").lower()
-        if method not in {"http", "ping3"}:
-            raise ValueError("probing.passive.method must be either 'http' or 'ping3'")
-        return method
-
-    @property
     def active_probe_enabled(self) -> bool:
         return self.get("probing.active.enabled", True)
 

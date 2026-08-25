@@ -20,7 +20,6 @@ admin:
 probing:
   passive:
     enabled: true
-    method: "ping3"  # "http" or "ping3"
     interval_seconds: 10
     timeout_seconds: 1
     probe_count: 3

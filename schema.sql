@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS power_sources (
     name VARCHAR(128) NOT NULL,
     type ENUM('ACTIVE', 'PASSIVE', 'GENERATOR') NOT NULL,
     address VARCHAR(256) NOT NULL,
+    ping_method ENUM('HTTP', 'PING', 'TCP') NOT NULL DEFAULT 'PING',
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
     description TEXT NULL,
     work_duration_minutes INT NOT NULL DEFAULT 240,

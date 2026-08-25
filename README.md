@@ -2,6 +2,10 @@
 
 A Python-based Telegram bot for notifying subscribers about power outages, generator events, and scheduled maintenance windows. Supports multiple chats, admin-controlled activation, and flexible power source management.
 
+User-facing messages are configured in `locale.yaml`. Message templates use
+Python format placeholders such as `{chat_id}` and `{source_name}`; keep the
+placeholder names intact when customizing a message.
+
 ## Features
 
 - **Multi-source monitoring**: Support for passive probing (bot pings device), active probing (device pings bot), and manual generator control
@@ -94,7 +98,6 @@ admin:
 
 probing:
   passive:
-    method: "http"  # "http" or "ping3"
     interval_seconds: 30
     timeout_seconds: 5
   active:
@@ -119,8 +122,8 @@ See `config.yaml` for all available options.
 ### Power Source Types
 
 #### 1. Passive (Bot pings device)
-- Bot periodically checks the device using HTTP GET or ICMP, selected by `probing.passive.method`
-- Use `method: "http"` with a URL, or `method: "ping3"` with a hostname/IP
+- Bot periodically checks the device using the source's `ping_method`: `HTTP`, `PING3`, or `TCP`
+- Use `HTTP` with a URL, `PING3` with a hostname/IP, or `TCP` with a `host:port` address
 - State: ONLINE/OFFLINE
 - Use case: Grid power lines, always-on devices
 
