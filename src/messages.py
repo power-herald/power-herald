@@ -18,6 +18,20 @@ def _load_locale() -> dict[str, Any]:
 _locale = _load_locale()
 
 
+def _escape_markdown_v2(value: str) -> str:
+    return value.replace("\\", "\\\\").translate(
+        str.maketrans({character: f"\\{character}" for character in "_*[]()~`>#+-=|{}.!"})
+    )
+
+
+def _is_outdated(date: str, end: str, as_of: datetime.datetime) -> bool:
+    try:
+        period_end = datetime.datetime.fromisoformat(f"{date}T{end}")
+    except ValueError:
+        return False
+    return period_end <= as_of.replace(tzinfo=None)
+
+
 def create_message(key: str, **parts: Any) -> str:
     """Create a complete localized message from a locale key and its pieces."""
     value: Any = _locale
@@ -78,23 +92,35 @@ def group_state_change_message(
     return "\n".join(parts)
 
 
-def schedule_message(date: str, outages: list[dict], name: str, today: bool = True) -> str:
+def schedule_message(
+    date: str,
+    outages: list[dict],
+    name: str,
+    today: bool = True,
+    as_of: datetime.datetime | None = None,
+) -> str:
     title_key = "schedule.outages_today" if today else "schedule.outages_tomorrow"
     empty_key = "schedule.no_outages_today" if today else "schedule.no_outages_tomorrow"
+    as_of = as_of or datetime.datetime.now()
     if not outages:
-        return get_message(empty_key, date=date, name=name)
-    return "\n".join(
-        [get_message(title_key, date=date, name=name)]
-        + [
+        return _escape_markdown_v2(get_message(empty_key, date=date, name=name))
+
+    lines = [_escape_markdown_v2(get_message(title_key, date=date, name=name))]
+    for outage in outages:
+        line = _escape_markdown_v2(
             get_message(
                 f"schedule.outage_period_{outage.get('status', 'offline')}",
                 start=outage["start"],
                 end=outage["end"],
             )
-            for outage in outages
-        ]
-    )
+        )
+        if _is_outdated(date, outage["end"], as_of):
+            line = f"~{line}~"
+        lines.append(line)
+    return "\n".join(lines)
 
 
-def schedule_message_from_json(message: dict[str, Any]) -> str:
-    return schedule_message(message["date"], message["outages"], message["name"])
+def schedule_message_from_json(
+    message: dict[str, Any], today: bool = True, as_of: datetime.datetime | None = None
+) -> str:
+    return schedule_message(message["date"], message["outages"], message["name"], today=today, as_of=as_of)

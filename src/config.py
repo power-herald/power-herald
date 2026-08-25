@@ -1,6 +1,7 @@
 # src/config.py
 import yaml
 import os
+import datetime as dt
 from typing import Dict, Any
 from dotenv import load_dotenv
 
@@ -129,6 +130,16 @@ class Config:
         if not isinstance(value, int) or value <= 0:
             raise ValueError("outages.delay_seconds must be a positive integer")
         return value
+
+    @property
+    def outage_schedule_send_time(self) -> dt.time:
+        value = self.get("outages.schedule_send_time", "21:00")
+        if not isinstance(value, str):
+            raise ValueError("outages.schedule_send_time must be in HH:MM format")
+        try:
+            return dt.datetime.strptime(value, "%H:%M").time()
+        except ValueError as error:
+            raise ValueError("outages.schedule_send_time must be in HH:MM format") from error
 
     @property
     def gpvs(self) -> list[dict[str, str]]:
