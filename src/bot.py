@@ -10,6 +10,8 @@ from src.config import get_config
 from src.messages import bot_greeting
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logging.getLogger("aiohttp.access").setLevel(logging.WARNING)
+logger = logging.getLogger(__name__)
 config = get_config()
 
 bot = Bot(token=config.bot_token)
@@ -20,7 +22,7 @@ try:
     from src.admin import router as admin_router
     dp.include_router(admin_router)
 except Exception as e:
-    logging.warning(f"Admin router not loaded: {e}")
+    logger.warning("Admin router not loaded: %s", e)
 
 @dp.message()
 async def echo_handler(message: types.Message):
@@ -28,15 +30,15 @@ async def echo_handler(message: types.Message):
 
 async def on_startup(app):
     await bot.set_webhook(config.webhook_url)
-    logging.info(f"Webhook set to {config.webhook_url}")
+    logger.info("Webhook set to %s", config.webhook_url)
 
 async def on_shutdown(app):
     await bot.delete_webhook()
-    logging.info("Webhook deleted")
+    logger.info("Webhook deleted")
 
 async def main():
-    logging.info(f"Bot webhook server starting on {config.webhook_address}:{config.webhook_port}{config.webhook_path}")
-    logging.info(f"Bot webhook URL: {config.webhook_url}")
+    logger.info("Bot webhook server starting on %s:%s%s", config.webhook_address, config.webhook_port, config.webhook_path)
+    logger.info("Bot webhook URL: %s", config.webhook_url)
     stop_event = asyncio.Event()
     loop = asyncio.get_running_loop()
     for shutdown_signal in (signal.SIGINT, signal.SIGTERM):
@@ -52,9 +54,9 @@ async def main():
     site = web.TCPSite(runner, config.webhook_address, int(config.webhook_port))
     try:
         await site.start()
-        logging.info(f"Bot webhook server started.")
+        logger.info("Bot webhook server started.")
         await stop_event.wait()
-        logging.info("Shutdown signal received")
+        logger.info("Shutdown signal received")
     finally:
         await runner.cleanup()
 

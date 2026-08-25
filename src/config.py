@@ -93,6 +93,22 @@ class Config:
         return self.get("probing.active.port", 8081)
 
     @property
+    def active_probe_address(self) -> str:
+        return self.get("probing.active.address", "0.0.0.0")
+
+    @property
+    def active_probe_endpoint(self) -> str:
+        return self.get("probing.active.endpoint", "/ping")
+
+    @property
+    def active_probe_timeout(self) -> int:
+        return self.get("probing.active.timeout_seconds", self.passive_probe_interval)
+
+    @property
+    def state_processor_interval(self) -> int:
+        return self.get("probing.processor.interval_seconds", self.passive_probe_interval)
+
+    @property
     def outage_json_url(self) -> str:
         return self.get("outages.json_url")
 

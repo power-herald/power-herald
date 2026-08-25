@@ -2,56 +2,73 @@
 import asyncio
 import logging
 import signal
+import sys
 from aiohttp import web
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from src.models import PowerSource, PowerSourceType, PowerStateChange, StateChangeType, Base
+from src.models import PowerSource, PowerSourceType, StateChangeType
 import datetime
 from src.config import get_config
-from src.outage_periods import record_outage_transition
+from src.state_store import record_state
 
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logging.getLogger("aiohttp.access").setLevel(logging.WARNING)
+logger = logging.getLogger("active-prober")
 config = get_config()
 engine = create_engine(config.db_url)
 Session = sessionmaker(bind=engine)
 
+@web.middleware
+async def cors_middleware(request, handler):
+    try:
+        if request.method == "OPTIONS":
+            response = web.Response(status=204)
+        else:
+            response = await handler(request)
+    except web.HTTPException as error:
+        response = error
+    except Exception:
+        logger.exception("Unhandled error while processing %s %s", request.method, request.path)
+        response = web.json_response({"error": "Internal server error"}, status=500)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    response.headers["Access-Control-Max-Age"] = "86400"
+    return response
+
 async def handle_active_ping(request):
     data = await request.json()
     source_name = data.get("name")
-    state = data.get("state")  # 'online', 'offline', 'unstable'
+    state = data.get("state")  # 'online' or 'offline'
+    logger.debug("Ping received from %s: source=%s, state=%s", request.remote, source_name, state)
     session = Session()
     source = session.query(PowerSource).filter_by(name=source_name, type=PowerSourceType.ACTIVE, enabled=True).first()
     from src.maintenance import is_maintenance
     maintenance, _ = is_maintenance(source.id if source else None)
     if maintenance:
+        logger.warning("Active ping rejected for %s: maintenance mode enabled", source_name)
         session.close()
         return web.json_response({"error": "Maintenance mode enabled"}, status=403)
     if not source:
+        logger.warning("Active ping rejected: active source not found or disabled: %s", source_name)
         session.close()
         return web.json_response({"error": "Source not found or not active"}, status=404)
     try:
         state_enum = StateChangeType(state)
     except Exception:
+        logger.warning("Active ping rejected for %s: invalid state=%s", source_name, state)
         session.close()
         return web.json_response({"error": "Invalid state"}, status=400)
-    last_state = session.query(PowerStateChange).filter_by(source_id=source.id).order_by(PowerStateChange.timestamp.desc()).first()
-    if not last_state or last_state.state != state_enum:
-        state_change = PowerStateChange(source_id=source.id, state=state_enum, timestamp=datetime.datetime.utcnow())
-        session.add(state_change)
-        record_outage_transition(session, source.id, state_enum, state_change.timestamp)
-        session.commit()
-        logging.info(f"Active state changed for {source.name}: {state_enum.value}")
-        try:
-            import asyncio
-            from src.notify import notify_state_change
-            asyncio.create_task(notify_state_change(state_change.source_id, state_change.state, state_change.timestamp))
-        except Exception as e:
-            logging.warning(f"Notification failed: {e}")
+    timestamp = datetime.datetime.now(datetime.timezone.utc)
+    record_state(session, source.id, state_enum, timestamp)
+    session.commit()
+    logger.info("Source %s is %s", source.name, state_enum.value)
     session.close()
     return web.json_response({"status": "ok"})
 
 def create_app():
-    app = web.Application()
-    app.router.add_post("/active_ping", handle_active_ping)
+    app = web.Application(middlewares=[cors_middleware])
+    app.router.add_post(config.active_probe_endpoint, handle_active_ping)
     return app
 
 async def main():
@@ -63,12 +80,12 @@ async def main():
     app = create_app()
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", 8081)
+    site = web.TCPSite(runner, config.active_probe_address, config.active_probe_port)
     try:
         await site.start()
-        logging.info("Active probe started on port 8081")
+        logger.info("Active probe started on %s:%d", config.active_probe_address, config.active_probe_port)
         await stop_event.wait()
-        logging.info("Shutdown signal received")
+        logger.info("Shutdown signal received")
     finally:
         await runner.cleanup()
 

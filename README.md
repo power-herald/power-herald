@@ -9,6 +9,7 @@ placeholder names intact when customizing a message.
 ## Features
 
 - **Multi-source monitoring**: Support for passive probing (bot pings device), active probing (device pings bot), and manual generator control
+- **Grouped notifications**: Group passive sources into one named, described group; when every enabled source changes to the same state, one message includes per-source outage durations, otherwise only changed sources are notified
 - **Smart notifications**: Includes state changes, outage durations, and generator maintenance schedules
 - **Per-chat subscriptions**: Different buildings/groups can subscribe to specific power sources
 - **Admin controls**: Manual activation approval, maintenance mode management, generator event configuration
@@ -26,6 +27,7 @@ placeholder names intact when customizing a message.
 │   ├── bot.py              # Telegram webhook bot & main entry point
 │   ├── admin.py            # Admin commands (activation, maintenance, generator)
 │   ├── probe.py            # Passive probing daemon (bot pings devices)
+│   ├── processor.py        # State processor and notification daemon
 │   ├── active_probe.py     # Active probe HTTP endpoint (devices ping bot)
 │   ├── generator.py        # Generator control endpoint
 │   ├── notify.py           # Notification logic (state changes + maintenance windows)
@@ -68,6 +70,33 @@ cp config.yaml.example config.yaml
 ```bash
 mysql -u root -p < schema.sql
 ```
+
+### Database CLI
+
+`ph-cli` provides database administration without opening a Python shell. Use
+`--db-url` for a one-off database or omit it to use `config.yaml`:
+
+```bash
+./ph-cli db restore
+./ph-cli groups add --name "Main buildings" --description "Primary sites"
+./ph-cli sources add --name grid-a --type passive --address 192.0.2.10 --ping-method ping
+./ph-cli group-sources add --group-id 1 --source-id 1
+./ph-cli group-sources list
+./ph-cli sources list --json
+./ph-cli sources update 1 --enabled 0
+./ph-cli sources remove 1
+./ph-cli subscriptions list
+./ph-cli power-states --source-id 1 --state offline
+./ph-cli state-changes --from 2026-01-01T00:00:00Z --to 2026-01-31T23:59:59Z
+./ph-cli outage-periods --source-id 1 --json
+./ph-cli generator-sessions --source-id 2
+```
+
+The CRUD resources are `groups`, `sources`, `group-sources`, `subscriptions`,
+`chats`, and `maintenances`. Use `group-sources` to assign sources to groups;
+its records accept `--group-id` and `--source-id`. State snapshots, state
+changes, outage periods, and generator sessions are list-only and support
+`--source-id`, `--state`, `--from`, `--to`, and `--json` filters.
 
 4. **OpenRC installation** (see OPENRC_SETUP.md):
 ```bash
@@ -129,7 +158,7 @@ See `config.yaml` for all available options.
 
 #### 2. Active (Device pings bot)
 - Device sends HTTP POST to `/active_ping` endpoint
-- Payload: `{"name": "source_name", "state": "online|offline|unstable"}`
+- Payload: `{"name": "source_name", "state": "online|offline"}`
 - Use case: Devices with limited battery, smart controllers
 
 #### 3. Generator (Manual control with maintenance)
@@ -147,7 +176,7 @@ See `config.yaml` for all available options.
 POST /active_ping
 {
   "name": "source_name",
-  "state": "online|offline|unstable"
+  "state": "online|offline"
 }
 ```
 
@@ -171,6 +200,7 @@ POST /generator
 sudo rc-service power_herald_bot start
 sudo rc-service power_herald_passive_probe start
 sudo rc-service power_herald_active_probe start
+sudo rc-service power_herald_processor start
 sudo rc-service power_herald_schedule_poster start
 
 # Restart all
@@ -188,7 +218,7 @@ sudo tail -f /var/log/power_herald/bot.log
 ### Key Tables
 
 - `power_sources` - Device/generator definitions
-- `power_state_changes` - State transitions (online/offline/unstable)
+- `power_state_changes` - State transitions (online/offline)
 - `outage_periods` - Offline periods with start/stop timestamps
 - `chats` - Telegram chats subscribed to service
 - `subscriptions` - Chat-to-source mappings

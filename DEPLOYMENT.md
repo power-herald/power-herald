@@ -116,12 +116,14 @@ sudo chmod +x /etc/init.d/power_herald_*
 sudo rc-update add power_herald_bot default
 sudo rc-update add power_herald_passive_probe default
 sudo rc-update add power_herald_active_probe default
+sudo rc-update add power_herald_processor default
 sudo rc-update add power_herald_schedule_poster default
 
 # Start services
 sudo rc-service power_herald_bot start
 sudo rc-service power_herald_passive_probe start
 sudo rc-service power_herald_active_probe start
+sudo rc-service power_herald_processor start
 sudo rc-service power_herald_schedule_poster start
 ```
 
@@ -213,7 +215,7 @@ curl -X POST http://localhost:8082/generator \
 ```bash
 #!/bin/bash
 # Monitor script
-for service in power_herald_bot power_herald_passive_probe power_herald_active_probe; do
+for service in power_herald_bot power_herald_passive_probe power_herald_active_probe power_herald_processor; do
     if ! rc-service $service status > /dev/null 2>&1; then
         echo "WARNING: $service is not running" | mail -s "Power Herald Alert" admin@example.com
     fi

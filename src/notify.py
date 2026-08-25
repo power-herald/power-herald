@@ -4,11 +4,13 @@ import asyncio
 from aiogram import Bot
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from src.models import PowerSource, OutagePeriod, Chat, Subscription, StateChangeType, PowerSourceType, GeneratorSession, Base
+from src.models import PowerSource, PowerSourceGroup, OutagePeriod, Chat, Subscription, StateChangeType, PowerSourceType, GeneratorSession, Base
 import os
 import datetime
 from src.config import get_config
-from src.messages import state_change_message
+from src.messages import group_state_change_message, state_change_message
+
+logger = logging.getLogger("notifier")
 
 config = get_config()
 engine = create_engine(config.db_url)
@@ -72,7 +74,44 @@ async def notify_state_change(source_id: int, state: StateChangeType, timestamp:
         
         msg = state_change_message(source.name, state.value, duration, maintenance_window, next_working_window)
         await bot.send_message(chat.chat_id, msg)
-        logging.info(f"Notified {chat.title or chat.chat_id}: {msg}")
+        logger.info("Notified %s: %s", chat.title or chat.chat_id, msg)
+    session.close()
+
+
+async def notify_group_state_change(
+    group_id: int,
+    state: StateChangeType,
+    timestamp: datetime.datetime,
+    source_ids: list[int],
+):
+    session = Session()
+    group = session.query(PowerSourceGroup).get(group_id)
+    if group is None:
+        session.close()
+        return
+
+    sources = {source.id: source for source in group.sources if source.id in source_ids}
+    durations = []
+    for source in sources.values():
+        period = session.query(OutagePeriod).filter(
+            OutagePeriod.source_id == source.id,
+            OutagePeriod.finished_at.isnot(None),
+        ).order_by(OutagePeriod.started_at.desc()).first()
+        durations.append((source.name, period.finished_at - period.started_at if period else None))
+
+    subscriptions = session.query(Subscription).filter(
+        Subscription.source_id.in_(sources), Subscription.enabled == True
+    ).all()
+    chats = {}
+    for subscription in subscriptions:
+        chat = session.query(Chat).get(subscription.chat_id)
+        if chat and chat.enabled:
+            chats[chat.id] = chat
+
+    message = group_state_change_message(group.name, group.description, state.value, durations)
+    for chat in chats.values():
+        await bot.send_message(chat.chat_id, message)
+        logger.info("Notified %s: %s", chat.title or chat.chat_id, message)
     session.close()
 
 # Example usage: asyncio.run(notify_state_change(source_id, state, timestamp))

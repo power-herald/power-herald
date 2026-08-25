@@ -9,6 +9,8 @@ from src.models import Chat, Subscription, PowerSource, Base
 from src.schedule import fetch_outage_data, format_outages_for_building
 import os
 
+logger = logging.getLogger(__name__)
+
 BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN")
 DB_URL = "mysql+pymysql://user:password@localhost/power_herald"
 engine = create_engine(DB_URL)
@@ -30,7 +32,7 @@ async def post_daily_schedules():
         for building_id in building_ids:
             text = format_outages_for_building(building_id, outages)
             await bot.send_message(chat.chat_id, text)
-            logging.info(f"Posted schedule to {chat.chat_id} for {building_id}")
+            logger.info("Posted schedule to %s for %s", chat.chat_id, building_id)
     session.close()
 
 async def main():
@@ -41,7 +43,7 @@ async def main():
         if next_run < now:
             next_run += datetime.timedelta(days=1)
         wait_seconds = (next_run - now).total_seconds()
-        logging.info(f"Waiting {wait_seconds/3600:.2f} hours until next schedule post.")
+        logger.info("Waiting %.2f hours until next schedule post.", wait_seconds / 3600)
         await asyncio.sleep(wait_seconds)
         await post_daily_schedules()
 

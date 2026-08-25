@@ -4,7 +4,7 @@ from __future__ import annotations
 import datetime
 import enum
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Boolean, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Boolean, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -34,11 +34,29 @@ class PowerSource(Base):
     # Generator-specific config
     work_duration_minutes: Mapped[int] = mapped_column(Integer, default=240)  # 4 hours
     maintenance_duration_minutes: Mapped[int] = mapped_column(Integer, default=60)  # 1 hour
+    groups: Mapped[list[PowerSourceGroup]] = relationship(
+        secondary='power_source_group_sources', back_populates='sources'
+    )
+
+class PowerSourceGroup(Base):
+    __tablename__ = 'power_source_groups'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    sources: Mapped[list[PowerSource]] = relationship(
+        secondary='power_source_group_sources', back_populates='groups'
+    )
+
+class PowerSourceGroupSource(Base):
+    __tablename__ = 'power_source_group_sources'
+    __table_args__ = (UniqueConstraint('group_id', 'source_id'),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    group_id: Mapped[int] = mapped_column(ForeignKey('power_source_groups.id'), nullable=False)
+    source_id: Mapped[int] = mapped_column(ForeignKey('power_sources.id'), nullable=False)
 
 class StateChangeType(enum.Enum):
     ONLINE = "online"
     OFFLINE = "offline"
-    UNSTABLE = "unstable"
 
 class PowerStateChange(Base):
     __tablename__ = 'power_state_changes'
@@ -46,6 +64,16 @@ class PowerStateChange(Base):
     source_id: Mapped[int] = mapped_column(ForeignKey('power_sources.id'), nullable=False)
     timestamp: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     state: Mapped[StateChangeType] = mapped_column(Enum(StateChangeType), nullable=False)
+    source: Mapped[PowerSource] = relationship()
+
+class PowerState(Base):
+    __tablename__ = 'power_states'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_id: Mapped[int] = mapped_column(ForeignKey('power_sources.id'), nullable=False)
+    state: Mapped[StateChangeType] = mapped_column(Enum(StateChangeType), nullable=False)
+    last_updated_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     source: Mapped[PowerSource] = relationship()
 
 class OutagePeriod(Base):

@@ -3,11 +3,14 @@ import logging
 from aiohttp import web
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from src.models import PowerSource, PowerSourceType, PowerStateChange, StateChangeType
+from src.models import PowerSource, PowerSourceType, StateChangeType
 from src.notify import notify_state_change
-from src.outage_periods import record_outage_transition
+from src.state_store import latest_state, record_change, record_state
 import asyncio
 import datetime
+
+logger = logging.getLogger(__name__)
+logging.getLogger("aiohttp.access").setLevel(logging.WARNING)
 
 DB_URL = "mysql+pymysql://user:password@localhost/power_herald"
 engine = create_engine(DB_URL)
@@ -31,24 +34,20 @@ async def handle_generator_command(request):
         return web.json_response({"error": "Generator source not found"}, status=404)
     
     new_state = StateChangeType.ONLINE if command == "start" else StateChangeType.OFFLINE
-    last_state = session.query(PowerStateChange).filter_by(source_id=source.id).order_by(PowerStateChange.timestamp.desc()).first()
+    last_state = latest_state(session, source.id, stable_only=True)
     
     if not last_state or last_state.state != new_state:
-        state_change = PowerStateChange(
-            source_id=source.id,
-            state=new_state,
-            timestamp=datetime.datetime.utcnow()
-        )
-        session.add(state_change)
-        record_outage_transition(session, source.id, new_state, state_change.timestamp)
+        timestamp = datetime.datetime.now(datetime.timezone.utc)
+        record_state(session, source.id, new_state, timestamp)
+        record_change(session, source.id, new_state, timestamp)
         session.commit()
-        logging.info(f"Generator {source.name} command: {command}")
+        logger.info("Generator %s command: %s", source.name, command)
         
         # Trigger notifications
         try:
-            asyncio.create_task(notify_state_change(state_change.source_id, state_change.state, state_change.timestamp))
+            asyncio.create_task(notify_state_change(source.id, new_state, timestamp))
         except Exception as e:
-            logging.warning(f"Notification failed: {e}")
+            logger.warning("Notification failed: %s", e)
     
     session.close()
     return web.json_response({"status": "ok"})

@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Active Probe Simulator</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17212b;
+      --muted: #687582;
+      --paper: #f6f4ef;
+      --panel: #fffdf8;
+      --line: #d8d3c7;
+      --accent: #0f766e;
+      --accent-dark: #095c56;
+      --danger: #b42318;
+      --shadow: 0 18px 45px rgba(35, 45, 48, .12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      color: var(--ink);
+      background: radial-gradient(circle at 12% 8%, #e6eee8 0 18%, transparent 42%), var(--paper);
+      font: 16px/1.5 Georgia, "Times New Roman", serif;
+    }
+
+    main {
+      width: min(100%, 560px);
+      padding: clamp(24px, 5vw, 48px);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(2rem, 6vw, 3.2rem);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .intro { margin: 0 0 32px; color: var(--muted); }
+
+    label, legend {
+      display: block;
+      margin-bottom: 8px;
+      font: 700 0.78rem/1.2 "Trebuchet MS", sans-serif;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    input[type="text"], input[type="url"] {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      color: var(--ink);
+      background: #fff;
+      font: 1rem/1.3 "Trebuchet MS", sans-serif;
+    }
+
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+    .range-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .range-value { color: var(--accent-dark); }
+
+    input:focus-visible, button:focus-visible, .switch input:focus-visible + span {
+      outline: 3px solid rgba(15, 118, 110, .28);
+      outline-offset: 2px;
+    }
+
+    .field { margin-bottom: 22px; }
+    fieldset { margin: 0 0 26px; padding: 0; border: 0; }
+
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 14px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .switch-row:last-child { border-bottom: 1px solid var(--line); }
+    .switch-row label { margin: 0; font: 1rem/1.3 Georgia, "Times New Roman", serif; letter-spacing: 0; text-transform: none; }
+
+    .switch { position: relative; flex: 0 0 auto; width: 52px; height: 30px; }
+    .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+    .switch span { display: block; width: 52px; height: 30px; border-radius: 30px; background: #b9b6ad; cursor: pointer; transition: background .2s ease; }
+    .switch span::after { content: ""; display: block; width: 22px; height: 22px; margin: 3px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .2); transition: transform .2s ease; }
+    .switch input:checked + span { background: var(--accent); }
+    .switch input:checked + span::after { transform: translateX(22px); }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    button {
+      padding: 14px 18px;
+      border: 0;
+      border-radius: 3px;
+      color: white;
+      background: var(--accent);
+      cursor: pointer;
+      font: 700 1rem "Trebuchet MS", sans-serif;
+    }
+    button:hover { background: var(--accent-dark); }
+    button:disabled { cursor: wait; opacity: .65; }
+
+    #status {
+      min-height: 24px;
+      margin: 18px 0 0;
+      color: var(--muted);
+      font: .9rem/1.4 "Trebuchet MS", sans-serif;
+    }
+    #status.error { color: var(--danger); }
+    #status.success { color: var(--accent-dark); }
+
+    .response-label { margin-top: 24px; color: var(--muted); }
+    pre { overflow: auto; padding: 12px; background: #f0eee8; white-space: pre-wrap; word-break: break-word; }
+
+    @media (max-width: 420px) {
+      .actions { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Active probe</h1>
+    <p class="intro">Send a simulated power source heartbeat to Power Herald.</p>
+
+    <form id="probe-form">
+      <div class="field">
+        <label for="endpoint">Endpoint URL</label>
+        <input id="endpoint" name="endpoint" type="url" value="http://localhost:8081/ping" placeholder="http://localhost:8081/ping" required>
+      </div>
+
+      <div class="field">
+        <label for="source-name">Simulated source name</label>
+        <input id="source-name" name="source-name" type="text" value="sim" placeholder="sim" required>
+      </div>
+
+      <div class="field">
+        <div class="range-heading">
+          <label for="sending-interval">Sending interval</label>
+          <output id="sending-interval-value" class="range-value" for="sending-interval">10 seconds</output>
+        </div>
+        <input id="sending-interval" name="sending-interval" type="range" min="1" max="60" value="10">
+      </div>
+
+      <fieldset>
+        <legend>Simulation controls</legend>
+        <div class="switch-row">
+          <label for="state">Simulated source is online</label>
+          <label class="switch">
+            <input id="state" name="state" type="checkbox" checked>
+            <span aria-hidden="true"></span>
+          </label>
+        </div>
+        <div class="switch-row">
+          <label for="send-offline">Send offline state</label>
+          <label class="switch">
+            <input id="send-offline" name="send-offline" type="checkbox" checked>
+            <span aria-hidden="true"></span>
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="actions">
+        <button id="start-button" type="button">Start sending</button>
+        <button id="stop-button" type="button" disabled>Stop sending</button>
+      </div>
+      <p id="status" role="status" aria-live="polite"></p>
+      <label class="response-label" for="response">Last response</label>
+      <pre id="response">No request sent yet.</pre>
+    </form>
+  </main>
+
+  <script>
+    const endpoint = document.querySelector("#endpoint");
+    const sourceName = document.querySelector("#source-name");
+    const sendingInterval = document.querySelector("#sending-interval");
+    const sendingIntervalValue = document.querySelector("#sending-interval-value");
+    const state = document.querySelector("#state");
+    const sendOffline = document.querySelector("#send-offline");
+    const startButton = document.querySelector("#start-button");
+    const stopButton = document.querySelector("#stop-button");
+    const status = document.querySelector("#status");
+    const response = document.querySelector("#response");
+    let sendingIntervalMs = Number(sendingInterval.value) * 1000;
+    let sendingTimer = null;
+
+    function updateSendingInterval() {
+      sendingIntervalMs = Number(sendingInterval.value) * 1000;
+      sendingIntervalValue.textContent = `${sendingInterval.value} seconds`;
+      if (sendingTimer !== null) {
+        clearInterval(sendingTimer);
+        sendingTimer = setInterval(sendPing, sendingIntervalMs);
+      }
+    }
+
+    function setStatus(message, type) {
+      status.textContent = message;
+      status.className = type || "";
+    }
+
+    sendingInterval.addEventListener("input", updateSendingInterval);
+
+    async function sendPing() {
+      const simulatedState = state.checked ? "online" : "offline";
+
+      if (simulatedState === "offline" && !sendOffline.checked) {
+        setStatus("Offline sending is disabled.", "");
+        response.textContent = "Request skipped.";
+        return false;
+      }
+
+      setStatus("Sending...", "");
+      response.textContent = "Waiting for response...";
+
+      try {
+        const result = await fetch(endpoint.value, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: sourceName.value.trim(), state: simulatedState })
+        });
+        const body = await result.text();
+        let formattedBody = body;
+        try { formattedBody = JSON.stringify(JSON.parse(body), null, 2); } catch (_) { /* Plain-text response. */ }
+        response.textContent = formattedBody || "(empty response)";
+        if (!result.ok) throw new Error(`HTTP ${result.status}`);
+        setStatus(`Ping sent as ${simulatedState}.`, "success");
+        return true;
+      } catch (error) {
+        setStatus(`Request failed: ${error.message}`, "error");
+        return false;
+      }
+    }
+
+    startButton.addEventListener("click", async () => {
+      if (sendingTimer !== null) return;
+      sendingTimer = setInterval(sendPing, sendingIntervalMs);
+      startButton.disabled = true;
+      stopButton.disabled = false;
+      setStatus("Sending started.", "");
+      await sendPing();
+    });
+
+    stopButton.addEventListener("click", () => {
+      clearInterval(sendingTimer);
+      sendingTimer = null;
+      startButton.disabled = false;
+      stopButton.disabled = true;
+      setStatus("Sending stopped.", "");
+    });
+  </script>
+</body>
+</html>

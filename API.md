@@ -22,7 +22,7 @@ Devices send their power state to this endpoint. Used for active monitoring wher
 ```json
 {
   "name": "grid_line_main",
-  "state": "online|offline|unstable"
+  "state": "online|offline"
 }
 ```
 

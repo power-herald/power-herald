@@ -19,6 +19,7 @@ usermod -a -G power_herald power_herald
 sudo cp init.d/power_herald_bot /etc/init.d/
 sudo cp init.d/power_herald_passive_probe /etc/init.d/
 sudo cp init.d/power_herald_active_probe /etc/init.d/
+sudo cp init.d/power_herald_processor /etc/init.d/
 sudo cp init.d/power_herald_schedule_poster /etc/init.d/
 sudo chmod +x /etc/init.d/power_herald_*
 ```
@@ -42,12 +43,14 @@ sudo chmod 600 /etc/power_herald/config.yaml
 sudo rc-service power_herald_bot start
 sudo rc-service power_herald_passive_probe start
 sudo rc-service power_herald_active_probe start
+sudo rc-service power_herald_processor start
 sudo rc-service power_herald_schedule_poster start
 
 # Add to default runlevel (optional)
 sudo rc-update add power_herald_bot default
 sudo rc-update add power_herald_passive_probe default
 sudo rc-update add power_herald_active_probe default
+sudo rc-update add power_herald_processor default
 sudo rc-update add power_herald_schedule_poster default
 ```
 
