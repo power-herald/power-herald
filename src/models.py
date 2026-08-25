@@ -4,7 +4,7 @@ from __future__ import annotations
 import datetime
 import enum
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Boolean, Text, UniqueConstraint
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Boolean, Text, UniqueConstraint, JSON
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -121,3 +121,22 @@ class GeneratorSession(Base):
     maintenance_window_start: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     maintenance_window_end: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     source: Mapped[PowerSource] = relationship()
+
+class OutageData(Base):
+    __tablename__ = 'outage_data'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    last_updated_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    json: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+class Outage(Base):
+    __tablename__ = 'outage'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    message_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    message: Mapped[dict] = mapped_column(JSON, nullable=False)

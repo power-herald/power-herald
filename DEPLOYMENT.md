@@ -117,14 +117,14 @@ sudo rc-update add power_herald_bot default
 sudo rc-update add power_herald_passive_probe default
 sudo rc-update add power_herald_active_probe default
 sudo rc-update add power_herald_processor default
-sudo rc-update add power_herald_schedule_poster default
+sudo rc-update add power_herald_schedule default
 
 # Start services
 sudo rc-service power_herald_bot start
 sudo rc-service power_herald_passive_probe start
 sudo rc-service power_herald_active_probe start
 sudo rc-service power_herald_processor start
-sudo rc-service power_herald_schedule_poster start
+sudo rc-service power_herald_schedule start
 ```
 
 ### 7. Verify Installation

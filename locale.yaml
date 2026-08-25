@@ -31,6 +31,9 @@ notification:
   group_source_offline_duration: "⏱ Для {source_name} світло було: {duration}"
 
 schedule:
-  outages: "⏱ Відключення для {date}:"
-  outage_period: "  {start} - {end}"
-  no_outages: "⏱ Немає відключень для {date}."
+  outages_today: "🗓 Графік відключень для {name} на сьогодні, {date}:"
+  outages_tomorrow: "🗓 Графік відключень для {name} на завтра, {date}:"
+  outage_period_online: "🟢 {start} - {end}"
+  outage_period_offline: "🔴 {start} - {end}"
+  no_outages_today: "🗓 Немає відключень для {name} на сьогодні, {date}."
+  no_outages_tomorrow: "🗓 Немає відключень для {name} на завтра, {date}."

@@ -116,3 +116,21 @@ CREATE TABLE IF NOT EXISTS generator_sessions (
     CONSTRAINT fk_generator_sessions_source
         FOREIGN KEY (source_id) REFERENCES power_sources (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS outage_data (
+    id INT NOT NULL AUTO_INCREMENT,
+    last_updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    content_hash VARCHAR(64) NOT NULL,
+    json JSON NOT NULL,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS outage (
+    id INT NOT NULL AUTO_INCREMENT,
+    name VARCHAR(128) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    message_hash VARCHAR(64) NOT NULL,
+    message JSON NOT NULL,
+    PRIMARY KEY (id),
+    KEY ix_outage_name_id (name, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

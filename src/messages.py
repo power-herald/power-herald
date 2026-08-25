@@ -78,10 +78,23 @@ def group_state_change_message(
     return "\n".join(parts)
 
 
-def schedule_message(date: str, outages: list[dict]) -> str:
+def schedule_message(date: str, outages: list[dict], name: str, today: bool = True) -> str:
+    title_key = "schedule.outages_today" if today else "schedule.outages_tomorrow"
+    empty_key = "schedule.no_outages_today" if today else "schedule.no_outages_tomorrow"
     if not outages:
-        return get_message("schedule.no_outages", date=date)
+        return get_message(empty_key, date=date, name=name)
     return "\n".join(
-        [get_message("schedule.outages", date=date)]
-        + [get_message("schedule.outage_period", start=outage["start"], end=outage["end"]) for outage in outages]
+        [get_message(title_key, date=date, name=name)]
+        + [
+            get_message(
+                f"schedule.outage_period_{outage.get('status', 'offline')}",
+                start=outage["start"],
+                end=outage["end"],
+            )
+            for outage in outages
+        ]
     )
+
+
+def schedule_message_from_json(message: dict[str, Any]) -> str:
+    return schedule_message(message["date"], message["outages"], message["name"])

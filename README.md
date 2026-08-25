@@ -133,8 +133,13 @@ probing:
     port: 8081
 
 outages:
+  source: "url" # "url" or "file"
   json_url: "https://raw.githubusercontent.com/Baskerville42/outage-data-ua/main/data/outages.json"
-  daily_post_time: "07:00"
+  json_file: "/path/to/outages.json"
+  delay_seconds: 1800
+  gpvs:
+    - name: "Kyiv GPV 37.1"
+      id: "GPV37.1"
 ```
 
 See `config.yaml` for all available options.
@@ -201,7 +206,7 @@ sudo rc-service power_herald_bot start
 sudo rc-service power_herald_passive_probe start
 sudo rc-service power_herald_active_probe start
 sudo rc-service power_herald_processor start
-sudo rc-service power_herald_schedule_poster start
+sudo rc-service power_herald_schedule start
 
 # Restart all
 sudo rc-service power_herald_* restart

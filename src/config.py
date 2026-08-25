@@ -113,20 +113,36 @@ class Config:
         return self.get("outages.json_url")
 
     @property
-    def daily_post_time(self) -> str:
-        return self.get("outages.daily_post_time", "07:00")
+    def outage_data_source(self) -> str:
+        source = self.get("outages.source", "url")
+        if source not in {"url", "file"}:
+            raise ValueError("outages.source must be either 'url' or 'file'")
+        return source
 
     @property
-    def daily_post_enabled(self) -> bool:
-        return self.get("outages.daily_post_enabled", True)
+    def outage_json_file(self) -> str:
+        return self.get("outages.json_file")
+
+    @property
+    def outage_update_interval_seconds(self) -> int:
+        value = self.get("outages.delay_seconds", 1800)
+        if not isinstance(value, int) or value <= 0:
+            raise ValueError("outages.delay_seconds must be a positive integer")
+        return value
+
+    @property
+    def gpvs(self) -> list[dict[str, str]]:
+        value = self.get("outages.gpvs", [])
+        if not isinstance(value, list):
+            raise ValueError("outages.gpvs must be a list")
+        for gpv in value:
+            if not isinstance(gpv, dict) or not isinstance(gpv.get("name"), str) or not isinstance(gpv.get("id"), str):
+                raise ValueError("each outages.gpvs item must have string name and id")
+        return value
 
     @property
     def logging_level(self) -> str:
         return self.get("logging.level", "INFO")
-
-    @property
-    def buildings(self) -> list:
-        return self.get("buildings", [])
 
 # Global config instance
 config = None

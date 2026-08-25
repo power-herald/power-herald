@@ -1,11 +1,11 @@
 #!/sbin/openrc-run
-# OpenRC init script for power_herald_schedule_poster
-# Place in /etc/init.d/power_herald_schedule_poster
+# OpenRC init script for power_herald_schedule
+# Place in /etc/init.d/power_herald_schedule
 
-description="Power Herald Daily Schedule Poster"
+description="Power Herald Schedule"
 command="/opt/power_herald/venv/bin/python"
-command_args="-m src.schedule_poster"
-pidfile="/var/run/power_herald_schedule_poster.pid"
+command_args="-m src.schedule"
+pidfile="/var/run/power_herald_schedule.pid"
 user="power_herald"
 group="power_herald"
 directory="/opt/power_herald"

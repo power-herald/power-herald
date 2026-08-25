@@ -1,36 +1,95 @@
-# src/schedule.py
-import json
-import datetime
-import requests
-from typing import List
-from src.messages import schedule_message
+import asyncio
+import datetime as dt
+import logging
+import signal
 
-# Example usage: python src/schedule.py <building_id>
-# This script fetches pregenerated outage JSON and formats outages for today and tomorrow
+from aiogram import Bot
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-OUTAGE_JSON_URL = "https://raw.githubusercontent.com/Baskerville42/outage-data-ua/main/data/outages.json"  # Example URL
+from src.config import get_config
+from src.messages import schedule_message_from_json
+from src.models import Base, Chat, Outage, OutageData
+from src.outage_data import content_hash, fetch_outage_data, message_hash, prepare_messages
 
-def fetch_outage_data():
-    resp = requests.get(OUTAGE_JSON_URL)
-    resp.raise_for_status()
-    return resp.json()
+logger = logging.getLogger("schedule")
 
-def format_outages_for_building(building_id: str, outages: List[dict]) -> str:
-    now = datetime.datetime.now()
-    today = now.date()
-    tomorrow = today + datetime.timedelta(days=1)
-    result = []
-    for day in [today, tomorrow]:
-        day_str = day.strftime("%Y-%m-%d")
-        day_outages = [o for o in outages if o.get("building_id") == building_id and o.get("date") == day_str]
-        result.append(schedule_message(day_str, day_outages))
-    return "\n".join(result)
+
+async def update_once() -> bool:
+    config = get_config()
+    engine = create_engine(config.db_url)
+    Base.metadata.create_all(engine)
+    data = fetch_outage_data(source=config.outage_data_source)
+    current_hash = content_hash(data)
+    changed_messages: list[dict] = []
+    with sessionmaker(bind=engine)() as session:
+        previous = session.query(OutageData).order_by(OutageData.id.desc()).first()
+        if previous and previous.content_hash == current_hash:
+            previous.last_updated_at = dt.datetime.now(dt.timezone.utc)
+            previous.json = data
+        elif previous:
+            previous.last_updated_at = dt.datetime.now(dt.timezone.utc)
+            previous.content_hash = current_hash
+            previous.json = data
+        else:
+            session.add(OutageData(content_hash=current_hash, json=data))
+        for name, message in prepare_messages(data, config.gpvs).items():
+            if not message["outages"]:
+                continue
+            current_message_hash = message_hash(message)
+            latest = session.query(Outage).filter_by(name=name).order_by(Outage.id.desc()).first()
+            if latest and latest.message_hash == current_message_hash:
+                continue
+            session.add(Outage(name=name, message_hash=current_message_hash, message=message))
+            changed_messages.append(message)
+        session.commit()
+    await send_messages(config.bot_token, changed_messages)
+    return True
+
+
+async def send_messages(token: str, messages: list[dict]) -> None:
+    if not messages:
+        return
+    config = get_config()
+    engine = create_engine(config.db_url)
+    bot = Bot(token=token)
+    try:
+        with sessionmaker(bind=engine)() as session:
+            for message in messages:
+                rendered_message = schedule_message_from_json(message)
+                for chat in session.query(Chat).filter_by(enabled=True).all():
+                    try:
+                        await bot.send_message(chat.chat_id, rendered_message)
+                    except Exception:
+                        logger.exception("Failed to send outage message to %s", chat.chat_id)
+    finally:
+        await bot.session.close()
+
+
+async def main() -> None:
+    config = get_config()
+    stop_event = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    for shutdown_signal in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(shutdown_signal, stop_event.set)
+
+    logger.info("Schedule poster started")
+    try:
+        while not stop_event.is_set():
+            try:
+                await update_once()
+            except Exception:
+                logger.exception("Outage schedule update failed")
+            try:
+                await asyncio.wait_for(
+                    stop_event.wait(),
+                    timeout=config.outage_update_interval_seconds,
+                )
+            except asyncio.TimeoutError:
+                continue
+    finally:
+        logger.info("Shutdown signal received")
 
 if __name__ == "__main__":
-    import sys
-    if len(sys.argv) < 2:
-        print("Usage: python src/schedule.py <building_id>")
-        sys.exit(1)
-    building_id = sys.argv[1]
-    outages = fetch_outage_data()
-    print(format_outages_for_building(building_id, outages))
+    logging.basicConfig(level=logging.INFO)
+    asyncio.run(main())

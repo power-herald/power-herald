@@ -33,9 +33,13 @@ probing:
     interval_seconds: 20
 
 outages:
-  json_url: "https://raw.githubusercontent.com/Baskerville42/outage-data-ua/main/data/outages.json"
-  daily_post_time: "07:00"
-  daily_post_enabled: true
+  source: "file"
+  json_url: "https://raw.githubusercontent.com/Baskerville42/outage-data-ua/refs/heads/main/data/kyiv.json"
+  json_file: "./kyiv-test.json"
+  delay_seconds: 1800
+  gpvs:
+    - name: "Kyiv GPV 37.1"
+      id: "GPV37.1"
 
 maintenance:
   default_enabled: false
@@ -44,11 +48,3 @@ maintenance:
 logging:
   level: "INFO"
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-
-buildings:
-  - id: "building_001"
-    name: "Building A"
-    chat_id: "123456789"
-  - id: "building_002"
-    name: "Building B"
-    chat_id: "987654321"
