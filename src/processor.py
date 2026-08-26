@@ -47,7 +47,10 @@ def process_group(session, group, timestamp):
         logger.info("Processing state change for source: %s", source.name)
         state = current_state(session, source, timestamp)
         previous = latest_change(session, source.id, stable_only=True)
-        logger.debug("Current state for %s: %s, previous state: %s", source.name, state.value, previous.state.value if previous else "None")
+        logger.info(
+            "Current state for %s: %s, previous state: %s",
+            source.name, state.value, previous.state.value if previous else "None"
+        )
         if previous is None or previous.state != state:
             logger.warning("State changed for %s: %s", source.name, state.value)
             record_change(session, source.id, state, timestamp)
@@ -76,6 +79,10 @@ async def process_sources():
             logger.info("Processing state change for source: %s", source.name)
             state = current_state(session, source, timestamp)
             previous = latest_change(session, source.id, stable_only=True)
+            logger.info(
+                "Current state for %s: %s, previous state: %s",
+                source.name, state.value, previous.state.value if previous else "None"
+            )
             if previous is None or previous.state != state:
                 logger.warning("State changed for %s: %s", source.name, state.value)
                 record_change(session, source.id, state, timestamp)

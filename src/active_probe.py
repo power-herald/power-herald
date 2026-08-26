@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from src.models import PowerSource, PowerSourceType, StateChangeType
 import datetime
 from src.config import get_config
-from src.state_store import record_change, record_state
+from src.state_store import record_state
 from src.lifecycle import use_stop_event
 
 config = get_config()
@@ -56,9 +56,7 @@ async def handle_active_ping(request):
             logger.warning("Active ping rejected for %s: invalid state=%s", source_name, state)
             return web.json_response({"error": "Invalid state"}, status=400)
         timestamp = config.now()
-        _, changed = record_state(session, source.id, state_enum, timestamp)
-        if changed:
-            record_change(session, source.id, state_enum, timestamp)
+        record_state(session, source.id, state_enum, timestamp)
         session.commit()
         logger.info("Source %s is %s", source.name, state_enum.value)
         return web.json_response({"status": "ok"})

@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from src.config import get_config
 from src.maintenance import is_maintenance
 from src.models import PowerSource, PowerSourceType, StateChangeType, PingMethod
-from src.state_store import record_change, record_state
+from src.state_store import record_state
 from src.lifecycle import use_stop_event
 
 config = get_config()
@@ -66,9 +66,7 @@ async def probe_source(session, source):
             break
     timestamp = get_config().now()
     if len(states) > 1 and states[0] == states[-1]:
-        _, changed = record_state(session, source.id, states[-1], timestamp)
-        if changed:
-            record_change(session, source.id, states[-1], timestamp)
+        record_state(session, source.id, states[-1], timestamp)
         logger.info("Source %s is %s", source.name, states[-1].value)
 
 
