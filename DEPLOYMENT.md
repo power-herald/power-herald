@@ -143,19 +143,33 @@ curl -I https://your.domain/webhook
 Login to MySQL and add power sources:
 
 ```sql
-INSERT INTO power_sources (name, type, address, ping_method, enabled, description, work_duration_minutes, maintenance_duration_minutes) VALUES
-  ('Line A', 'PASSIVE', 'http://192.168.1.10:8000', 'HTTP', 1, 'Main city power line', 240, 60),
-  ('Generator 1', 'GENERATOR', 'N/A', 'HTTP', 1, 'Backup generator', 240, 60);
+INSERT INTO power_sources (name, type, enabled, description) VALUES
+  ('Line A', 'PASSIVE', 1, 'Main city power line'),
+  ('Generator 1', 'GENERATOR', 1, 'Backup generator');
+INSERT INTO passive_sources (source_id, address, ping_method)
+  VALUES (1, 'http://192.168.1.10:8000', 'HTTP');
+INSERT INTO generator_sources (source_id, work_duration_minutes, maintenance_duration_minutes)
+  VALUES (2, 240, 60);
 ```
 
-For existing databases, add the column before inserting sources:
+Set `ping_method` to `PING` with a hostname/IP, or `TCP` with a `host:port`
+address (the `tcp://host:port` form is also accepted).
+
+For a database created with the previous schema, migrate the subtype data
+before dropping the old columns:
 
 ```sql
-ALTER TABLE power_sources ADD COLUMN ping_method ENUM('HTTP', 'PING3', 'TCP') NOT NULL DEFAULT 'HTTP';
+INSERT INTO passive_sources (source_id, address, ping_method)
+SELECT id, address, ping_method FROM power_sources WHERE type = 'PASSIVE';
+INSERT INTO generator_sources (source_id, work_duration_minutes, maintenance_duration_minutes)
+SELECT id, work_duration_minutes, maintenance_duration_minutes
+FROM power_sources WHERE type = 'GENERATOR';
+ALTER TABLE power_sources
+  DROP COLUMN address,
+  DROP COLUMN ping_method,
+  DROP COLUMN work_duration_minutes,
+  DROP COLUMN maintenance_duration_minutes;
 ```
-
-Set `ping_method` to `PING3` with a hostname/IP, or `TCP` with a `host:port`
-address (the `tcp://host:port` form is also accepted).
 
 ### 2. Create Chat Subscriptions
 
@@ -172,7 +186,7 @@ INSERT INTO subscriptions (chat_id, source_id, enabled) VALUES
 
 ```bash
 # Test passive probe (should trigger on timeout)
-mysql> SELECT * FROM power_state_changes ORDER BY timestamp DESC LIMIT 5;
+mysql> SELECT * FROM state_changes ORDER BY timestamp DESC LIMIT 5;
 
 # Test active probe
 curl -X POST http://localhost:8081/active_ping \
@@ -220,7 +234,7 @@ done
 mysqldump -u power_herald -p power_herald > /var/backups/power_herald_$(date +%Y%m%d).sql
 
 # Cleanup old state changes (optional, keep 90 days)
-mysql power_herald -e "DELETE FROM power_state_changes WHERE timestamp < DATE_SUB(NOW(), INTERVAL 90 DAY);"
+mysql power_herald -e "DELETE FROM state_changes WHERE timestamp < DATE_SUB(NOW(), INTERVAL 90 DAY);"
 ```
 
 ## Troubleshooting
@@ -255,7 +269,7 @@ mysql> SELECT * FROM subscriptions;
 mysql> SELECT * FROM chats WHERE chat_id = 'YOUR_CHAT_ID';
 
 # Check recent state changes
-mysql> SELECT * FROM power_state_changes ORDER BY timestamp DESC LIMIT 10;
+mysql> SELECT * FROM state_changes ORDER BY timestamp DESC LIMIT 10;
 ```
 
 ## Security Considerations

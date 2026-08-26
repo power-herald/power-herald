@@ -12,8 +12,8 @@ from sqlalchemy.orm import sessionmaker
 
 from src.config import get_config
 from src.maintenance import is_maintenance
-from src.models import PingMethod, PowerSource, PowerSourceType, StateChangeType
-from src.state_store import record_state
+from src.models import PowerSource, PowerSourceType, StateChangeType
+from src.state_store import record_change, record_state
 
 config = get_config()
 logger = logging.getLogger("passive-prober")
@@ -50,18 +50,25 @@ async def ping_host(address: str, timeout_sec: int, method: PingMethod = PingMet
 
 
 async def probe_source(session, source):
+    if source.passive is None:
+        logger.warning("Passive source %s has no passive configuration", source.name)
+        return
     if is_maintenance(source.id)[0]:
         logger.info("Maintenance mode enabled for %s, skipping probe.", source.name)
         return
     states = []
     for _ in range(config.passive_probe_count):
-        online = await ping_host(source.address, config.passive_probe_timeout, source.ping_method)
+        online = await ping_host(
+            source.passive.address, config.passive_probe_timeout, source.passive.ping_method
+        )
         states.append(StateChangeType.ONLINE if online else StateChangeType.OFFLINE)
         if len(states) > 1 and states[-1] == states[0]:
             break
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     if len(states) > 1 and states[0] == states[-1]:
-        record_state(session, source.id, states[-1], timestamp)
+        _, changed = record_state(session, source.id, states[-1], timestamp)
+        if changed:
+            record_change(session, source.id, states[-1], timestamp)
         logger.info("Source %s is %s", source.name, states[-1].value)
 
 

@@ -15,25 +15,26 @@ from sqlalchemy.orm import Session, sessionmaker
 from src.models import (
     Base,
     Chat,
-    GeneratorSession,
+    GeneratorSource,
     MaintenanceMode,
-    OutagePeriod,
+    Period,
+    PassiveSource,
     PingMethod,
     PowerSource,
-    PowerSourceGroupSource,
-    PowerSourceGroup,
+    PowerGroupSource,
+    PowerGroup,
     PowerSourceType,
-    PowerState,
-    PowerStateChange,
+    SourceState,
+    StateChange,
     StateChangeType,
     Subscription,
 )
 
 
 ENTITY_MODELS = {
-    "groups": PowerSourceGroup,
+    "groups": PowerGroup,
     "sources": PowerSource,
-    "group-sources": PowerSourceGroupSource,
+    "group-sources": PowerGroupSource,
     "subscriptions": Subscription,
     "chats": Chat,
     "maintenances": MaintenanceMode,
@@ -93,7 +94,7 @@ def build_parser() -> argparse.ArgumentParser:
     })
     add_entity_commands(commands, "sources", {
         "name": {"required": True}, "type": {"required": True, "type": lambda value: enum_value(PowerSourceType, value)},
-        "address": {"required": True}, "ping_method": {"type": lambda value: enum_value(PingMethod, value)},
+        "address": {}, "ping_method": {"type": lambda value: enum_value(PingMethod, value)},
         "enabled": {"type": int}, "description": {}, "work_duration_minutes": {"type": int},
         "maintenance_duration_minutes": {"type": int},
     })
@@ -113,10 +114,10 @@ def build_parser() -> argparse.ArgumentParser:
         "source_id": {"type": int}, "enabled": {"type": int}, "comment": {},
     })
 
-    for name, model in (("power-states", PowerState), ("state-changes", PowerStateChange), ("outage-periods", OutagePeriod), ("generator-sessions", GeneratorSession)):
+    for name, model in (("power-states", SourceState), ("state-changes", StateChange), ("outage-periods", Period)):
         listing = commands.add_parser(name, help=f"list {name}")
         listing.add_argument("--source-id", type=int)
-        if model in (PowerState, PowerStateChange, OutagePeriod):
+        if model in (SourceState, StateChange, Period):
             listing.add_argument("--state", type=lambda value: enum_value(StateChangeType, value))
         listing.add_argument("--from", dest="from_time", type=parse_datetime)
         listing.add_argument("--to", dest="to_time", type=parse_datetime)
@@ -162,14 +163,43 @@ def apply_values(record: Any, arguments: argparse.Namespace) -> None:
             setattr(record, column.name, value)
 
 
+def apply_source_type_values(source: PowerSource, arguments: argparse.Namespace) -> None:
+    if source.type == PowerSourceType.PASSIVE:
+        source.generator = None
+        subtype = source.passive
+        fields = ("address", "ping_method")
+        subtype_model = PassiveSource
+    elif source.type == PowerSourceType.GENERATOR:
+        source.passive = None
+        subtype = source.generator
+        fields = ("work_duration_minutes", "maintenance_duration_minutes")
+        subtype_model = GeneratorSource
+    else:
+        source.passive = None
+        source.generator = None
+        return
+
+    values = {field: getattr(arguments, field, None) for field in fields}
+    if subtype is None and any(value is not None for value in values.values()):
+        subtype = subtype_model()
+        if source.type == PowerSourceType.PASSIVE:
+            source.passive = subtype
+        else:
+            source.generator = subtype
+    if subtype is not None:
+        for field, value in values.items():
+            if value is not None:
+                setattr(subtype, field, value)
+
+
 def list_history(session: Session, model: Any, arguments: argparse.Namespace) -> list[Any]:
     query = session.query(model)
     if arguments.source_id is not None:
         query = query.filter(model.source_id == arguments.source_id)
     if arguments.state is not None:
         query = query.filter(model.state == arguments.state)
-    time_column = {PowerState: PowerState.last_updated_at, PowerStateChange: PowerStateChange.timestamp,
-                   OutagePeriod: OutagePeriod.started_at, GeneratorSession: GeneratorSession.started_at}[model]
+    time_column = {SourceState: SourceState.last_updated_at, StateChange: StateChange.timestamp,
+                   Period: Period.started_at}[model]
     if arguments.from_time is not None:
         query = query.filter(time_column >= arguments.from_time)
     if arguments.to_time is not None:
@@ -198,6 +228,8 @@ def run(arguments: argparse.Namespace) -> int:
             elif arguments.action == "add":
                 record = model()
                 apply_values(record, arguments)
+                if model is PowerSource:
+                    apply_source_type_values(record, arguments)
                 session.add(record)
                 session.commit()
                 print(json.dumps(serialize(record), default=str))
@@ -206,6 +238,8 @@ def run(arguments: argparse.Namespace) -> int:
                 if record is None:
                     raise ValueError(f"{arguments.command} record {arguments.id} was not found")
                 apply_values(record, arguments)
+                if model is PowerSource:
+                    apply_source_type_values(record, arguments)
                 session.commit()
                 print(json.dumps(serialize(record), default=str))
             else:
@@ -216,8 +250,8 @@ def run(arguments: argparse.Namespace) -> int:
                 session.commit()
                 print(f"Removed {arguments.command} record {arguments.id}.")
         else:
-            model = {"power-states": PowerState, "state-changes": PowerStateChange,
-                     "outage-periods": OutagePeriod, "generator-sessions": GeneratorSession}[arguments.command]
+            model = {"power-states": SourceState, "state-changes": StateChange,
+                     "outage-periods": Period}[arguments.command]
             output(list_history(session, model, arguments), arguments.json)
     return 0
 

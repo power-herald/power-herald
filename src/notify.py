@@ -4,7 +4,7 @@ import asyncio
 from aiogram import Bot
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from src.models import PowerSource, PowerSourceGroup, OutagePeriod, Chat, Subscription, StateChangeType, PowerSourceType, GeneratorSession, Base
+from src.models import PowerSource, PowerGroup, Period, Chat, Subscription, StateChangeType, PowerSourceType
 import os
 import datetime
 from src.config import get_config
@@ -27,26 +27,14 @@ async def notify_state_change(source_id: int, state: StateChangeType, timestamp:
 
     maintenance_window = None
     next_working_window = None
-    if source.type == PowerSourceType.GENERATOR:
+    if source.type == PowerSourceType.GENERATOR and source.generator is not None:
         if state == StateChangeType.ONLINE:
-            maint_start = timestamp + datetime.timedelta(minutes=source.work_duration_minutes)
-            maint_end = maint_start + datetime.timedelta(minutes=source.maintenance_duration_minutes)
+            maint_start = timestamp + datetime.timedelta(minutes=source.generator.work_duration_minutes)
+            maint_end = maint_start + datetime.timedelta(minutes=source.generator.maintenance_duration_minutes)
             maintenance_window = (maint_start.strftime("%H:%M"), maint_end.strftime("%H:%M"))
-            session.add(GeneratorSession(
-                source_id=source.id,
-                started_at=timestamp,
-                maintenance_window_start=maint_start,
-                maintenance_window_end=maint_end,
-            ))
         elif state == StateChangeType.OFFLINE:
-            work_start = timestamp + datetime.timedelta(minutes=source.maintenance_duration_minutes)
+            work_start = timestamp + datetime.timedelta(minutes=source.generator.maintenance_duration_minutes)
             next_working_window = work_start.strftime("%H:%M")
-            gen_session = session.query(GeneratorSession).filter_by(
-                source_id=source.id, stopped_at=None
-            ).first()
-            if gen_session:
-                gen_session.stopped_at = timestamp
-        session.commit()
 
     for sub in subs:
         chat = session.query(Chat).filter_by(enabled=True, id=sub.chat_id).first()
@@ -54,10 +42,10 @@ async def notify_state_change(source_id: int, state: StateChangeType, timestamp:
             continue
         
         # Stable transitions open a new period, so use the period just closed.
-        period = session.query(OutagePeriod).filter(
-            OutagePeriod.source_id == source.id,
-            OutagePeriod.finished_at.isnot(None)
-        ).order_by(OutagePeriod.started_at.desc()).first()
+        period = session.query(Period).filter(
+            Period.source_id == source.id,
+            Period.finished_at.isnot(None)
+        ).order_by(Period.started_at.desc()).first()
         duration = None
         if period and period.finished_at:
             duration = period.finished_at - period.started_at
@@ -81,7 +69,7 @@ async def notify_group_state_change(
     source_ids: list[int],
 ):
     session = Session()
-    group = session.query(PowerSourceGroup).get(group_id)
+    group = session.query(PowerGroup).get(group_id)
     if group is None:
         session.close()
         return
@@ -89,10 +77,10 @@ async def notify_group_state_change(
     sources = {source.id: source for source in group.sources if source.id in source_ids}
     durations = []
     for source in sources.values():
-        period = session.query(OutagePeriod).filter(
-            OutagePeriod.source_id == source.id,
-            OutagePeriod.finished_at.isnot(None),
-        ).order_by(OutagePeriod.started_at.desc()).first()
+        period = session.query(Period).filter(
+            Period.source_id == source.id,
+            Period.finished_at.isnot(None),
+        ).order_by(Period.started_at.desc()).first()
         durations.append((source.name, period.finished_at - period.started_at if period else None))
 
     subscriptions = session.query(Subscription).filter(

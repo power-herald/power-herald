@@ -29,8 +29,9 @@ async def set_generator_state(source_id: int, state: StateChangeType) -> bool:
 
     if not last_state or last_state.state != state:
         timestamp = datetime.datetime.now(datetime.timezone.utc)
-        record_state(session, source.id, state, timestamp)
-        record_change(session, source.id, state, timestamp)
+        _, changed = record_state(session, source.id, state, timestamp)
+        if changed:
+            record_change(session, source.id, state, timestamp)
         session.commit()
         logger.info("Generator %s state changed to %s", source.name, state.value)
         session.close()

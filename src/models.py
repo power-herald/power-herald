@@ -27,47 +27,66 @@ class PowerSource(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     type: Mapped[PowerSourceType] = mapped_column(Enum(PowerSourceType), nullable=False)
-    address: Mapped[str] = mapped_column(String(256), nullable=False)  # IP or URL
-    ping_method: Mapped[PingMethod] = mapped_column(Enum(PingMethod), nullable=False, default=PingMethod.PING)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     description: Mapped[str | None] = mapped_column(Text)
-    # Generator-specific config
-    work_duration_minutes: Mapped[int] = mapped_column(Integer, default=240)  # 4 hours
-    maintenance_duration_minutes: Mapped[int] = mapped_column(Integer, default=60)  # 1 hour
-    groups: Mapped[list[PowerSourceGroup]] = relationship(
-        secondary='power_source_group_sources', back_populates='sources'
+    passive: Mapped[PassiveSource | None] = relationship(
+        back_populates='source', uselist=False, cascade='all, delete-orphan'
+    )
+    generator: Mapped[GeneratorSource | None] = relationship(
+        back_populates='source', uselist=False, cascade='all, delete-orphan'
+    )
+    groups: Mapped[list[PowerGroup]] = relationship(
+        secondary='power_group_sources', back_populates='sources'
     )
 
-class PowerSourceGroup(Base):
-    __tablename__ = 'power_source_groups'
+
+class PassiveSource(Base):
+    __tablename__ = 'passive_sources'
+    source_id: Mapped[int] = mapped_column(ForeignKey('power_sources.id'), primary_key=True)
+    address: Mapped[str] = mapped_column(String(256), nullable=False)
+    ping_method: Mapped[PingMethod] = mapped_column(
+        Enum(PingMethod), nullable=False, default=PingMethod.PING
+    )
+    source: Mapped[PowerSource] = relationship(back_populates='passive')
+
+
+class GeneratorSource(Base):
+    __tablename__ = 'generator_sources'
+    source_id: Mapped[int] = mapped_column(ForeignKey('power_sources.id'), primary_key=True)
+    work_duration_minutes: Mapped[int] = mapped_column(Integer, default=240)
+    maintenance_duration_minutes: Mapped[int] = mapped_column(Integer, default=60)
+    source: Mapped[PowerSource] = relationship(back_populates='generator')
+
+class PowerGroup(Base):
+    __tablename__ = 'power_groups'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     sources: Mapped[list[PowerSource]] = relationship(
-        secondary='power_source_group_sources', back_populates='groups'
+        secondary='power_group_sources', back_populates='groups'
     )
 
-class PowerSourceGroupSource(Base):
-    __tablename__ = 'power_source_group_sources'
+class PowerGroupSource(Base):
+    __tablename__ = 'power_group_sources'
     __table_args__ = (UniqueConstraint('group_id', 'source_id'),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    group_id: Mapped[int] = mapped_column(ForeignKey('power_source_groups.id'), nullable=False)
+    group_id: Mapped[int] = mapped_column(ForeignKey('power_groups.id'), nullable=False)
     source_id: Mapped[int] = mapped_column(ForeignKey('power_sources.id'), nullable=False)
 
 class StateChangeType(enum.Enum):
     ONLINE = "online"
     OFFLINE = "offline"
 
-class PowerStateChange(Base):
-    __tablename__ = 'power_state_changes'
+class StateChange(Base):
+    __tablename__ = 'state_changes'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     source_id: Mapped[int] = mapped_column(ForeignKey('power_sources.id'), nullable=False)
     timestamp: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     state: Mapped[StateChangeType] = mapped_column(Enum(StateChangeType), nullable=False)
     source: Mapped[PowerSource] = relationship()
 
-class PowerState(Base):
-    __tablename__ = 'power_states'
+class SourceState(Base):
+    __tablename__ = 'source_states'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     source_id: Mapped[int] = mapped_column(ForeignKey('power_sources.id'), nullable=False)
     state: Mapped[StateChangeType] = mapped_column(Enum(StateChangeType), nullable=False)
@@ -76,8 +95,8 @@ class PowerState(Base):
     )
     source: Mapped[PowerSource] = relationship()
 
-class OutagePeriod(Base):
-    __tablename__ = 'outage_periods'
+class Period(Base):
+    __tablename__ = 'periods'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     source_id: Mapped[int] = mapped_column(ForeignKey('power_sources.id'), nullable=False)
     started_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -111,16 +130,6 @@ class MaintenanceMode(Base):
     comment: Mapped[str | None] = mapped_column(Text)
     source: Mapped[PowerSource | None] = relationship()
 
-class GeneratorSession(Base):
-    __tablename__ = 'generator_sessions'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    source_id: Mapped[int] = mapped_column(ForeignKey('power_sources.id'), nullable=False)
-    started_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    stopped_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    maintenance_window_start: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    maintenance_window_end: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    source: Mapped[PowerSource] = relationship()
-
 class OutageData(Base):
     __tablename__ = 'outage_data'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -131,7 +140,7 @@ class OutageData(Base):
     json: Mapped[dict] = mapped_column(JSON, nullable=False)
 
 class Outage(Base):
-    __tablename__ = 'outage'
+    __tablename__ = 'outages'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     created_at: Mapped[datetime.datetime] = mapped_column(

@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 
 from src.config import get_config
 from src.maintenance import is_maintenance
-from src.models import PowerSource, PowerSourceGroup, PowerSourceType, StateChangeType
+from src.models import PowerSource, PowerGroup, PowerSourceType, StateChangeType
 from src.notify import bot as notify_bot
 from src.notify import notify_group_state_change, notify_state_change
 from src.state_store import latest_change, latest_state, record_change
@@ -58,7 +58,7 @@ async def process_sources():
     session = Session()
     try:
         timestamp = datetime.datetime.now(datetime.timezone.utc)
-        groups = session.query(PowerSourceGroup).all()
+        groups = session.query(PowerGroup).all()
         grouped_ids = set()
         notifications = []
         for group in groups:

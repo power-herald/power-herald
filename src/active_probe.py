@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 from src.models import PowerSource, PowerSourceType, StateChangeType
 import datetime
 from src.config import get_config
-from src.state_store import record_state
+from src.state_store import record_change, record_state
 
 config = get_config()
 logger = logging.getLogger("active-prober")
@@ -59,7 +59,9 @@ async def handle_active_ping(request):
         session.close()
         return web.json_response({"error": "Invalid state"}, status=400)
     timestamp = datetime.datetime.now(datetime.timezone.utc)
-    record_state(session, source.id, state_enum, timestamp)
+    _, changed = record_state(session, source.id, state_enum, timestamp)
+    if changed:
+        record_change(session, source.id, state_enum, timestamp)
     session.commit()
     logger.info("Source %s is %s", source.name, state_enum.value)
     session.close()

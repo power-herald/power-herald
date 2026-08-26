@@ -89,13 +89,13 @@ mysql -u root -p < schema.sql
 ./ph-cli power-states --source-id 1 --state offline
 ./ph-cli state-changes --from 2026-01-01T00:00:00Z --to 2026-01-31T23:59:59Z
 ./ph-cli outage-periods --source-id 1 --json
-./ph-cli generator-sessions --source-id 2
 ```
 
 The CRUD resources are `groups`, `sources`, `group-sources`, `subscriptions`,
 `chats`, and `maintenances`. Use `group-sources` to assign sources to groups;
-its records accept `--group-id` and `--source-id`. State snapshots, state
-changes, outage periods, and generator sessions are list-only and support
+source subtype options are accepted on `sources add` and `sources update` and
+are optional. State snapshots, state
+changes, and outage periods are list-only and support
 `--source-id`, `--state`, `--from`, `--to`, and `--json` filters.
 
 4. **OpenRC installation** (see OPENRC_SETUP.md):
@@ -213,12 +213,11 @@ sudo tail -f /var/log/power_herald/bot.log
 ### Key Tables
 
 - `power_sources` - Device/generator definitions
-- `power_state_changes` - State transitions (online/offline)
-- `outage_periods` - Offline periods with start/stop timestamps
+- `state_changes` - State transitions (online/offline)
+- `periods` - Online/offline source state periods with start/stop timestamps
 - `chats` - Telegram chats subscribed to service
 - `subscriptions` - Chat-to-source mappings
 - `maintenance_modes` - Global or per-source maintenance toggles
-- `generator_sessions` - Generator run sessions with maintenance windows
 
 ## Workflow Examples
 
