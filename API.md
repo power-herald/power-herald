@@ -66,11 +66,11 @@ Approves and activates a chat that requested activation.
 
 **Admin only**: Yes
 **Args**: 
-- `chat_id`: Telegram chat ID to approve
+- `chat_id`: Chat ID to approve
 
-**Example**: `/approve 123456789`
+**Example**: `/approve 1`
 
-**Response**: "Chat Building A (123456789) activated."
+**Response**: "Chat Building A (1) activated."
 
 ---
 
@@ -79,10 +79,10 @@ Adds an enabled power source subscription to an activated or pending chat.
 
 **Admin only**: Yes
 **Args**:
-- `chat_id`: Telegram chat ID to subscribe
+- `chat_id`: Chat ID to subscribe
 - `source_id`: Power source ID
 
-**Example**: `/subscribe 123456789 1`
+**Example**: `/subscribe 1 1`
 
 ---
 

@@ -13,14 +13,14 @@ generator:
   already_in_state: "Generator is already {state}."
 
 admin:
-  activation_requested: "Activation requested for chat: {title} ({chat_id})"
+  activation_requested: "Activation requested for chat [{chat_id}] {title} "
   activation_request_sent: "Activation request sent to admin."
   not_authorized: "Not authorized."
-  chat_activated: "Chat {title} ({chat_id}) activated."
+  chat_activated: "Chat [{chat_id}] {title} activated."
   chat_activated_for_user: "Your chat is now activated!"
   chat_not_found: "Chat not found."
   chat_already_activated: "Chat is already activated."
-  subscription_added: "Chat {chat_id} subscribed to {source_name}."
+  subscription_added: "Chat [{chat_id}] {title} subscribed to [{source_id}] {source_name}."
   source_not_found: "Source not found or disabled."
   no_sources: "No sources found."
   source_list_item: "{source_id}: {source_name} ({source_type}, {status})"

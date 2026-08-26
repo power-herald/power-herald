@@ -66,7 +66,7 @@ async def activate_cmd(message: types.Message):
     session.commit()
     # Notify admin
     for admin_id in config.admin_chat_ids:
-        activation_message = get_message("admin.activation_requested", title=chat.title, chat_id=chat_id)
+        activation_message = get_message("admin.activation_requested", title=chat.title, chat_id=chat.id)
         await message.bot.send_message(admin_id, activation_message)
     response_message = get_message("admin.activation_request_sent")
     await message.answer(response_message)
@@ -85,11 +85,11 @@ async def approve_cmd(message: types.Message):
         return
     chat_id = args[1]
     session = Session()
-    chat = session.query(Chat).filter_by(chat_id=chat_id).first()
+    chat = session.query(Chat).filter_by(id=chat_id).first()
     if chat:
         chat.enabled = True
         session.commit()
-        response_message = get_message("admin.chat_activated", title=chat.title, chat_id=chat_id)
+        response_message = get_message("admin.chat_activated", title=chat.title, chat_id=chat.id)
         await message.answer(response_message)
         activation_message = get_message("admin.chat_activated_for_user")
         await message.bot.send_message(
@@ -138,7 +138,7 @@ async def subscribe_cmd(message: types.Message):
             session.add(Subscription(chat_id=chat.id, source_id=source.id))
         session.commit()
         await message.answer(
-            get_message("admin.subscription_added", chat_id=chat_id, source_name=source.name)
+            get_message("admin.subscription_added", chat_id=chat.id, title=chat.title, source_id=source.id, source_name=source.name)
         )
     session.close()
 
