@@ -64,7 +64,7 @@ async def probe_source(session, source):
         states.append(StateChangeType.ONLINE if online else StateChangeType.OFFLINE)
         if len(states) > 1 and states[-1] == states[0]:
             break
-    timestamp = datetime.datetime.now(datetime.timezone.utc)
+    timestamp = get_config.now()
     if len(states) > 1 and states[0] == states[-1]:
         _, changed = record_state(session, source.id, states[-1], timestamp)
         if changed:

@@ -140,6 +140,8 @@ outages:
   gpvs:
     - name: "Kyiv GPV 37.1"
       id: "GPV37.1"
+
+timezone: "Europe/Kyiv" # IANA timezone used for application timestamps and schedules
 ```
 
 See `config.yaml` for all available options.

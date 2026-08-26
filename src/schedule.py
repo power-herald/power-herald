@@ -34,11 +34,11 @@ async def update_once() -> bool:
         previous = session.query(OutageData).order_by(OutageData.id.desc()).first()
         if previous and previous.content_hash == current_hash:
             logger.info("Outage data content is unchanged")
-            previous.last_updated_at = dt.datetime.now(dt.timezone.utc)
+            previous.last_updated_at = config.now()
             previous.json = data
         elif previous:
             logger.info("Outage data content changed")
-            previous.last_updated_at = dt.datetime.now(dt.timezone.utc)
+            previous.last_updated_at = config.now()
             previous.content_hash = current_hash
             previous.json = data
         else:
@@ -70,8 +70,8 @@ async def update_once() -> bool:
 
 
 async def send_tomorrow_once() -> bool:
-    today = dt.date.today()
-    target_date = dt.date.today() + dt.timedelta(days=1)
+    today = config.now().date()
+    target_date = today + dt.timedelta(days=1)
     engine = create_engine(config.db_url)
     Base.metadata.create_all(engine)
     with sessionmaker(bind=engine)() as session:
@@ -94,7 +94,7 @@ async def send_tomorrow_once() -> bool:
     with sessionmaker(bind=engine)() as session:
         session.add(
             OutageNotification(
-                posted_at=dt.datetime.now(dt.timezone.utc),
+                posted_at=config.now(),
                 type=OutageNotificationType.TOMORROW,
             )
         )
@@ -110,7 +110,7 @@ async def send_messages(token: str, messages: list[dict], today: bool = True) ->
     engine = create_engine(config.db_url)
     bot = Bot(token=token)
     try:
-        sent_at = dt.datetime.now()
+        sent_at = config.now()
         with sessionmaker(bind=engine)() as session:
             chats = session.query(Chat).filter_by(enabled=True).all()
             logger.info("Sending %s changed outage messages to %s enabled chats", len(messages), len(chats))
@@ -143,7 +143,7 @@ async def main(stop_event=None) -> None:
                 await update_once()
             except Exception:
                 logger.exception("Outage schedule update failed")
-            now = dt.datetime.now()
+            now = config.now()
             if now.time() >= config.outage_schedule_send_time:
                 try:
                     await send_tomorrow_once()
@@ -153,7 +153,7 @@ async def main(stop_event=None) -> None:
                 "Waiting %s seconds before the next outage schedule update",
                 config.outage_update_interval_seconds,
             )
-            now = dt.datetime.now()
+            now = config.now()
             next_schedule = dt.datetime.combine(now.date(), config.outage_schedule_send_time)
             if now >= next_schedule:
                 next_schedule += dt.timedelta(days=1)

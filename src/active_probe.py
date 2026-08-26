@@ -55,7 +55,7 @@ async def handle_active_ping(request):
         except Exception:
             logger.warning("Active ping rejected for %s: invalid state=%s", source_name, state)
             return web.json_response({"error": "Invalid state"}, status=400)
-        timestamp = datetime.datetime.now(datetime.timezone.utc)
+        timestamp = config.now()
         _, changed = record_state(session, source.id, state_enum, timestamp)
         if changed:
             record_change(session, source.id, state_enum, timestamp)

@@ -21,10 +21,10 @@ engine = create_engine(config.db_url)
 Session = sessionmaker(bind=engine)
 
 
-def as_utc(timestamp):
+def as_config_timezone(timestamp):
     if timestamp.tzinfo is None or timestamp.utcoffset() is None:
-        return timestamp.replace(tzinfo=datetime.timezone.utc)
-    return timestamp.astimezone(datetime.timezone.utc)
+        return timestamp.replace(tzinfo=config.timezone)
+    return timestamp.astimezone(config.timezone)
 
 
 def current_state(session, source, timestamp):
@@ -33,7 +33,7 @@ def current_state(session, source, timestamp):
     if is_maintenance(source.id)[0]:
         return known.state if known else StateChangeType.OFFLINE
     if source.type == PowerSourceType.ACTIVE and (
-        observed is None or as_utc(observed.last_updated_at) < timestamp - datetime.timedelta(
+        observed is None or as_config_timezone(observed.last_updated_at) < timestamp - datetime.timedelta(
             seconds=config.active_probe_timeout
         )
     ):
@@ -58,7 +58,7 @@ def process_group(session, group, timestamp):
 async def process_sources():
     session = Session()
     try:
-        timestamp = datetime.datetime.now(datetime.timezone.utc)
+        timestamp = config.now()
         groups = session.query(PowerGroup).all()
         grouped_ids = set()
         notifications = []

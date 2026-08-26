@@ -31,6 +31,10 @@ async def notify_state_change(source_id: int, state: StateChangeType, timestamp:
         maintenance_window = None
         next_working_window = None
         if source.type == PowerSourceType.GENERATOR and source.generator is not None:
+            if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+                timestamp = timestamp.replace(tzinfo=config.timezone)
+            else:
+                timestamp = timestamp.astimezone(config.timezone)
             if state == StateChangeType.ONLINE:
                 maint_start = timestamp + datetime.timedelta(minutes=source.generator.work_duration_minutes)
                 maint_end = maint_start + datetime.timedelta(minutes=source.generator.maintenance_duration_minutes)
@@ -78,7 +82,7 @@ async def notify_group_state_change(
                 Period.source_id == source.id,
                 Period.finished_at.isnot(None),
             ).order_by(Period.started_at.desc()).first()
-            durations.append((source.name, period.finished_at - period.started_at if period else None))
+            durations.append((source.name, period.finished_at - period.started_at if period and period.finished_at else None))
 
         subscriptions = session.query(Subscription).filter(
             Subscription.source_id.in_(sources), Subscription.enabled == True

@@ -6,6 +6,8 @@ telegram:
   webhook_address: "0.0.0.0"
   webhook_secret: "YOUR_WEBHOOK_SECRET"
 
+timezone: "Europe/Kyiv"
+
 database:
   driver: "mysql+pymysql"
   host: "localhost"

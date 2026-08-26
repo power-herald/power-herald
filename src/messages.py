@@ -5,6 +5,8 @@ from typing import Any
 
 import yaml
 
+from src.config import get_config
+
 
 LOCALE_PATH = Path(__file__).resolve().parent.parent / "locale.yaml"
 
@@ -115,7 +117,7 @@ def schedule_message(
 ) -> str:
     title_key = "schedule.outages_today" if today else "schedule.outages_tomorrow"
     empty_key = "schedule.no_outages_today" if today else "schedule.no_outages_tomorrow"
-    as_of = as_of or datetime.datetime.now()
+    as_of = as_of or get_config().now()
     if not outages:
         return _escape_markdown_v2(get_message(empty_key, date=date, name=name))
 

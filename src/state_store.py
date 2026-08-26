@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from src.models import SourceState, StateChange, StateChangeType
 from src.outage_periods import record_outage_transition
+from src.config import get_config
 
 
 def latest_state(session: Session, source_id: int, stable_only=False):
@@ -26,7 +27,7 @@ def record_state(
     state: StateChangeType,
     timestamp=None,
 ):
-    timestamp = timestamp or datetime.datetime.now(datetime.timezone.utc)
+    timestamp = timestamp or get_config().now()
     previous = latest_state(session, source_id)
     if previous and previous.state == state:
         previous.last_updated_at = timestamp
@@ -38,7 +39,7 @@ def record_state(
 
 
 def record_change(session: Session, source_id: int, state: StateChangeType, timestamp=None):
-    timestamp = timestamp or datetime.datetime.now(datetime.timezone.utc)
+    timestamp = timestamp or get_config().now()
     if state not in (StateChangeType.ONLINE, StateChangeType.OFFLINE):
         return None
 

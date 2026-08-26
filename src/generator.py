@@ -28,7 +28,7 @@ async def set_generator_state(source_id: int, state: StateChangeType) -> bool:
     last_state = latest_state(session, source.id, stable_only=True)
 
     if not last_state or last_state.state != state:
-        timestamp = datetime.datetime.now(datetime.timezone.utc)
+        timestamp = config.now()
         _, changed = record_state(session, source.id, state, timestamp)
         if changed:
             record_change(session, source.id, state, timestamp)

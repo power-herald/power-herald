@@ -6,6 +6,7 @@ import logging
 import sys
 from typing import Dict, Any
 from dotenv import load_dotenv
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 load_dotenv()
 
@@ -58,6 +59,19 @@ class Config:
     def db_url(self) -> str:
         db = self.get("database")
         return f"{db['driver']}://{db['user']}:{db['password']}@{db['host']}:{db['port']}/{db['database']}"
+
+    @property
+    def timezone(self) -> ZoneInfo:
+        value = self.get("timezone", "Europe/Kyiv")
+        if not isinstance(value, str) or not value:
+            raise ValueError("timezone must be a valid IANA timezone name")
+        try:
+            return ZoneInfo(value)
+        except ZoneInfoNotFoundError as error:
+            raise ValueError(f"Unknown timezone: {value}") from error
+
+    def now(self) -> dt.datetime:
+        return dt.datetime.now(self.timezone)
 
     @property
     def admin_chat_ids(self) -> list:

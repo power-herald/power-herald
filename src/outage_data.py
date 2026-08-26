@@ -86,7 +86,7 @@ def prepare_messages(
     preset = data.get("preset") or {}
     fact = (data.get("fact") or {}).get("data", {})
     merged = merge_data(preset.get("data") or {}, fact)
-    selected_date = today or dt.date.today()
+    selected_date = today or get_config.now().date()
     weekday = str(selected_date.isoweekday())
     messages: dict[str, dict[str, Any]] = {}
     for gpv in gpvs:
