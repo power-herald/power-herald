@@ -40,12 +40,12 @@ def generator_keyboard() -> ReplyKeyboardMarkup:
 async def activate_cmd(message: types.Message):
     if chat_is_enabled(message.chat.id) and message.chat.type == "private":
         await message.answer(
-            get_message("admin.chat_already_activated"),
+            get_message("admin.error.chat_already_activated"),
             reply_markup=generator_keyboard(),
         )
         return
     if chat_is_enabled(message.chat.id) and message.chat.type != "private":
-        await message.answer(get_message("admin.chat_already_activated"))
+        await message.answer(get_message("admin.error.chat_already_activated"))
         return
     session = Session()
     chat_id = str(message.chat.id)
@@ -75,7 +75,7 @@ async def activate_cmd(message: types.Message):
 @router.message(Command("approve"))
 async def approve_cmd(message: types.Message):
     if str(message.chat.id) not in config.admin_chat_ids:
-        response_message = get_message("admin.not_authorized")
+        response_message = get_message("admin.error.not_authorized")
         await message.answer(response_message)
         return
     args = message.text.split()
@@ -99,7 +99,7 @@ async def approve_cmd(message: types.Message):
             reply_markup=generator_keyboard() if chat.is_private else None,
         )
     else:
-        response_message = get_message("admin.chat_not_found")
+        response_message = get_message("admin.error.chat_not_found")
         await message.answer(response_message)
     session.close()
 
@@ -107,7 +107,7 @@ async def approve_cmd(message: types.Message):
 @router.message(Command("subscribe"))
 async def subscribe_cmd(message: types.Message):
     if str(message.chat.id) not in config.admin_chat_ids:
-        await message.answer(get_message("admin.not_authorized"))
+        await message.answer(get_message("admin.error.not_authorized"))
         return
     args = message.text.split()
     if len(args) < 3:
@@ -118,16 +118,16 @@ async def subscribe_cmd(message: types.Message):
     try:
         source_id = int(source_id_text)
     except ValueError:
-        await message.answer(get_message("admin.source_not_found"))
+        await message.answer(get_message("admin.error.source_not_found"))
         return
 
     session = Session()
     chat = session.query(Chat).filter_by(id=chat_id).first()
     source = session.query(PowerSource).filter_by(id=source_id, enabled=True).first()
     if not chat:
-        await message.answer(get_message("admin.chat_not_found"))
+        await message.answer(get_message("admin.error.chat_not_found"))
     elif not source:
-        await message.answer(get_message("admin.source_not_found"))
+        await message.answer(get_message("admin.error.source_not_found"))
     else:
         subscription = session.query(Subscription).filter_by(
             chat_id=chat.id, source_id=source.id
@@ -146,13 +146,13 @@ async def subscribe_cmd(message: types.Message):
 @router.message(Command("sources"))
 async def sources_cmd(message: types.Message):
     if str(message.chat.id) not in config.admin_chat_ids:
-        await message.answer(get_message("admin.not_authorized"))
+        await message.answer(get_message("admin.error.not_authorized"))
         return
     session = Session()
     sources = session.query(PowerSource).order_by(PowerSource.id).all()
     session.close()
     if not sources:
-        await message.answer(get_message("admin.no_sources"))
+        await message.answer(get_message("admin.error.no_sources"))
         return
     lines = [
         get_message(
@@ -170,13 +170,13 @@ async def sources_cmd(message: types.Message):
 @router.message(Command("chats"))
 async def chats_cmd(message: types.Message):
     if str(message.chat.id) not in config.admin_chat_ids:
-        await message.answer(get_message("admin.not_authorized"))
+        await message.answer(get_message("admin.error.not_authorized"))
         return
     session = Session()
     chats = session.query(Chat).order_by(Chat.id).all()
     session.close()
     if not chats:
-        await message.answer(get_message("admin.no_chats"))
+        await message.answer(get_message("admin.error.no_chats"))
         return
     lines = [
         get_message(
@@ -192,7 +192,7 @@ async def chats_cmd(message: types.Message):
 @router.message(Command("maintenance"))
 async def maintenance_cmd(message: types.Message):
     if str(message.chat.id) not in config.admin_chat_ids:
-        response_message = get_message("admin.not_authorized")
+        response_message = get_message("admin.error.not_authorized")
         await message.answer(response_message)
         return
     # Example: /maintenance <source_id> <on|off> [comment]
@@ -216,10 +216,10 @@ async def maintenance_cmd(message: types.Message):
 @router.message(Command("generator"))
 async def activate_cmd(message: types.Message):
     if not chat_is_enabled(message.chat.id):
-        await message.answer(get_message("admin.not_authorized"))
+        await message.answer(get_message("admin.error.not_authorized"))
         return
     if message.chat.type != "private":
-        await message.answer(get_message("admin.generator_private_only"))
+        await message.answer(get_message("admin.error.generator_private_only"))
         return
     session = Session()
     source = session.query(PowerSource).filter_by(
@@ -227,7 +227,7 @@ async def activate_cmd(message: types.Message):
     ).first()
     session.close()
     if not source:
-        await message.answer(get_message("admin.generator_not_found"))
+        await message.answer(get_message("admin.error.generator_not_found"))
         return
     await message.answer(
         get_message("generator.status", source_name=source.name),
@@ -243,7 +243,7 @@ async def _generator_state_cmd(message: types.Message, state: StateChangeType):
     ).first()
     session.close()
     if (not chat or not source) and not chat_is_admin(message.chat.id):
-        response_message = get_message("admin.not_authorized") if not chat else get_message("admin.generator_not_found")
+        response_message = get_message("admin.error.not_authorized") if not chat else get_message("admin.error.generator_not_found")
         await message.answer(response_message)
         return
     changed = await set_generator_state(source.id, state)
