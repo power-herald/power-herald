@@ -138,10 +138,15 @@ def serialize(record: Any) -> dict[str, Any]:
     return result
 
 
+def json_text(value: Any) -> str:
+    encoding = (sys.stdout.encoding or "").lower().replace("-", "")
+    return json.dumps(value, default=str, ensure_ascii=encoding != "utf8")
+
+
 def output(records: list[Any], as_json: bool) -> None:
     data = [serialize(record) for record in records]
     if as_json:
-        print(json.dumps(data, default=str))
+        print(json_text(data))
         return
     if not data:
         print("No records found.")
@@ -232,7 +237,7 @@ def run(arguments: argparse.Namespace) -> int:
                     apply_source_type_values(record, arguments)
                 session.add(record)
                 session.commit()
-                print(json.dumps(serialize(record), default=str))
+                print(json_text(serialize(record)))
             elif arguments.action == "update":
                 record = session.get(model, arguments.id)
                 if record is None:
@@ -241,7 +246,7 @@ def run(arguments: argparse.Namespace) -> int:
                 if model is PowerSource:
                     apply_source_type_values(record, arguments)
                 session.commit()
-                print(json.dumps(serialize(record), default=str))
+                print(json_text(serialize(record)))
             else:
                 record = session.get(model, arguments.id)
                 if record is None:

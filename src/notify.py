@@ -53,10 +53,10 @@ async def notify_state_change(source_id: int, state: StateChangeType, timestamp:
             ).order_by(Period.started_at.desc()).first()
             duration = period.finished_at - period.started_at if period and period.finished_at else None
             if source.type != PowerSourceType.GENERATOR:
-                msg = state_change_message(source.name, state.value, duration)
+                msg = state_change_message(source.name, source.description, state.value, duration)
             else:
                 msg = generator_state_change_message(
-                    source.name, state.value, duration, maintenance_window, next_working_window
+                    source.name, source.description, state.value, duration, maintenance_window, next_working_window
                 )
             await bot.send_message(chat.chat_id, msg, message_thread_id=chat.thread_id)
             logger.info("Notified %s: %s", chat.title or chat.chat_id, msg.replace("\n", " "))

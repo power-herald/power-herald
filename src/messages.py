@@ -50,13 +50,15 @@ def bot_greeting(chat_id: int, thread_id: int | None) -> str:
 
 def state_change_message(
     source_name: str,
+    source_description: str | None,
     state: str,
     duration: datetime.timedelta | None = None
 ) -> str:
     state_key = state.lower()
     message_key = f"notification.source.{state_key}"
-    parts = [get_message(message_key, source_name=source_name, state=state.upper())]
+    parts = [get_message(message_key, source_name=source_name, state=state.upper(), source_description=source_description or "")]
     if duration:
+        parts.append("")
         duration_key = f"notification.source.{state_key}_duration"
         parts.append(get_message(duration_key, duration=str(duration).split(".")[0]))
     return "\n".join(parts)
@@ -64,6 +66,7 @@ def state_change_message(
 
 def generator_state_change_message(
     source_name: str,
+    source_description: str | None,
     state: str,
     duration: datetime.timedelta | None = None,
     maintenance_window: tuple[str, str] | None = None,
@@ -71,8 +74,9 @@ def generator_state_change_message(
 ) -> str:
     state_key = state.lower()
     message_key = f"notification.generator.{state_key}"
-    parts = [get_message(message_key, source_name=source_name, state=state.upper())]
+    parts = [get_message(message_key, source_name=source_name, state=state.upper(), source_description=source_description or "")]
     if duration and state_key == "offline":
+        parts.append("")
         duration_key = f"notification.generator.{state_key}_duration"
         parts.append(get_message(duration_key, duration=str(duration).split(".")[0]))
     if maintenance_window:
@@ -90,9 +94,7 @@ def group_state_change_message(
 ) -> str:
     state_key = state.lower()
     message_key = f"notification.group.{state_key}"
-    parts = [get_message(message_key, group_name=group_name, state=state.upper())]
-    if group_description:
-        parts.append(group_description)
+    parts = [get_message(message_key, group_name=group_name, state=state.upper(), group_description=group_description or "")]
     for source_name, duration in source_durations:
         if duration:
             message_key = f"notification.group.source_{state_key}_duration"
