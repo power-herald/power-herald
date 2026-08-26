@@ -174,3 +174,9 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+
+# Any other hidden files and folders
+.*
+
+# Python virtual environment
+venv/

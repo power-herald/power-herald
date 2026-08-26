@@ -90,9 +90,9 @@ class Chat(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     chat_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     title: Mapped[str | None] = mapped_column(String(256))
+    thread_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
-    is_forum: Mapped[bool] = mapped_column(Boolean, default=False)
-    admin: Mapped[bool] = mapped_column(Boolean, default=False)  # Is this an admin chat?
+    is_private: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
 class Subscription(Base):
     __tablename__ = 'subscriptions'
@@ -100,7 +100,6 @@ class Subscription(Base):
     chat_id: Mapped[int] = mapped_column(ForeignKey('chats.id'), nullable=False)
     source_id: Mapped[int] = mapped_column(ForeignKey('power_sources.id'), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
-    notify_generator: Mapped[bool] = mapped_column(Boolean, default=True)  # Notify on generator events
     chat: Mapped[Chat] = relationship()
     source: Mapped[PowerSource] = relationship()
 

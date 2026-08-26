@@ -8,7 +8,7 @@ from src.models import PowerSource, PowerSourceGroup, OutagePeriod, Chat, Subscr
 import os
 import datetime
 from src.config import get_config
-from src.messages import group_state_change_message, state_change_message
+from src.messages import generator_state_change_message, group_state_change_message, state_change_message
 
 config = get_config()
 logger = logging.getLogger("notifier")
@@ -24,15 +24,33 @@ async def notify_state_change(source_id: int, state: StateChangeType, timestamp:
         session.close()
         return
     subs = session.query(Subscription).filter_by(source_id=source.id, enabled=True).all()
+
+    maintenance_window = None
+    next_working_window = None
+    if source.type == PowerSourceType.GENERATOR:
+        if state == StateChangeType.ONLINE:
+            maint_start = timestamp + datetime.timedelta(minutes=source.work_duration_minutes)
+            maint_end = maint_start + datetime.timedelta(minutes=source.maintenance_duration_minutes)
+            maintenance_window = (maint_start.strftime("%H:%M"), maint_end.strftime("%H:%M"))
+            session.add(GeneratorSession(
+                source_id=source.id,
+                started_at=timestamp,
+                maintenance_window_start=maint_start,
+                maintenance_window_end=maint_end,
+            ))
+        elif state == StateChangeType.OFFLINE:
+            work_start = timestamp + datetime.timedelta(minutes=source.maintenance_duration_minutes)
+            next_working_window = work_start.strftime("%H:%M")
+            gen_session = session.query(GeneratorSession).filter_by(
+                source_id=source.id, stopped_at=None
+            ).first()
+            if gen_session:
+                gen_session.stopped_at = timestamp
+        session.commit()
+
     for sub in subs:
-        chat = session.query(Chat).get(sub.chat_id)
-        if chat is None:
-            continue
-        if not chat.enabled:
-            continue
-        
-        # Skip generator notifications if not opted in
-        if source.type == PowerSourceType.GENERATOR and not sub.notify_generator:
+        chat = session.query(Chat).filter_by(enabled=True, id=sub.chat_id).first()
+        if chat is None or chat.chat_id in config.admin_chat_ids:
             continue
         
         # Stable transitions open a new period, so use the period just closed.
@@ -44,37 +62,15 @@ async def notify_state_change(source_id: int, state: StateChangeType, timestamp:
         if period and period.finished_at:
             duration = period.finished_at - period.started_at
         
-        maintenance_window = None
-        next_working_window = None
-        # Generator-specific messages with maintenance windows
-        if source.type == PowerSourceType.GENERATOR:
-            if state == StateChangeType.ONLINE:
-                # Generator started - show maintenance window
-                maint_start = timestamp + datetime.timedelta(minutes=source.work_duration_minutes)
-                maint_end = maint_start + datetime.timedelta(minutes=source.maintenance_duration_minutes)
-                maintenance_window = (maint_start.strftime("%H:%M"), maint_end.strftime("%H:%M"))
-                # Create generator session record
-                gen_session = GeneratorSession(
-                    source_id=source.id,
-                    started_at=timestamp,
-                    maintenance_window_start=maint_start,
-                    maintenance_window_end=maint_end
-                )
-                session.add(gen_session)
-                session.commit()
-            elif state == StateChangeType.OFFLINE:
-                # Generator stopped - show next working window
-                work_start = timestamp + datetime.timedelta(minutes=source.maintenance_duration_minutes)
-                next_working_window = work_start.strftime("%H:%M")
-                # Update generator session record
-                gen_session = session.query(GeneratorSession).filter_by(source_id=source.id, stopped_at=None).first()
-                if gen_session:
-                    gen_session.stopped_at = timestamp
-                    session.commit()
-        
-        msg = state_change_message(source.name, state.value, duration, maintenance_window, next_working_window)
-        await bot.send_message(chat.chat_id, msg)
-        logger.info("Notified %s: %s", chat.title or chat.chat_id, msg)
+        msg = None
+        if source.type != PowerSourceType.GENERATOR:
+            msg = state_change_message(source.name, state.value, duration)
+        else:
+            msg = generator_state_change_message(
+                source.name, state.value, duration, maintenance_window, next_working_window
+            )
+        await bot.send_message(chat.chat_id, msg, message_thread_id=chat.thread_id)
+        logger.info("Notified %s: %s", chat.title or chat.chat_id, msg.replace("\n", " "))
     session.close()
 
 
@@ -110,7 +106,7 @@ async def notify_group_state_change(
 
     message = group_state_change_message(group.name, group.description, state.value, durations)
     for chat in chats.values():
-        await bot.send_message(chat.chat_id, message)
+        await bot.send_message(chat.chat_id, message, message_thread_id=chat.thread_id)
         logger.info("Notified %s: %s", chat.title or chat.chat_id, message)
     session.close()
 

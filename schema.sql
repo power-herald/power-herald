@@ -44,9 +44,9 @@ CREATE TABLE IF NOT EXISTS chats (
     id INT NOT NULL AUTO_INCREMENT,
     chat_id VARCHAR(64) NOT NULL,
     title VARCHAR(256) NULL,
+    thread_id INT NULL,
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
-    is_forum BOOLEAN NOT NULL DEFAULT FALSE,
-    admin BOOLEAN NOT NULL DEFAULT FALSE,
+    is_private BOOLEAN NOT NULL DEFAULT FALSE,
     PRIMARY KEY (id),
     UNIQUE KEY uq_chats_chat_id (chat_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -87,7 +87,6 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     chat_id INT NOT NULL,
     source_id INT NOT NULL,
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
-    notify_generator BOOLEAN NOT NULL DEFAULT TRUE,
     PRIMARY KEY (id),
     CONSTRAINT fk_subscriptions_chat
         FOREIGN KEY (chat_id) REFERENCES chats (id),

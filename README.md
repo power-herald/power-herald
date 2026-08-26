@@ -29,7 +29,7 @@ placeholder names intact when customizing a message.
 │   ├── probe.py            # Passive probing daemon (bot pings devices)
 │   ├── processor.py        # State processor and notification daemon
 │   ├── active_probe.py     # Active probe HTTP endpoint (devices ping bot)
-│   ├── generator.py        # Generator control endpoint
+│   ├── generator.py        # Generator state control used by the bot
 │   ├── notify.py           # Notification logic (state changes + maintenance windows)
 │   ├── outage_periods.py   # Outage period tracking & duration calculation
 │   ├── maintenance.py      # Maintenance mode management
@@ -151,7 +151,7 @@ See `config.yaml` for all available options.
 - `/activate` - Request chat activation (notifies admin)
 - `/approve <chat_id>` - Approve chat activation (admin only)
 - `/maintenance <source_id|global> <on|off> [comment]` - Toggle maintenance mode
-- `/generator <source_id> <on|off>` - Toggle generator notifications for chat
+- `Start Generator` / `Stop Generator` - Control the generator from an activated chat
 
 ### Power Source Types
 
@@ -167,8 +167,7 @@ See `config.yaml` for all available options.
 - Use case: Devices with limited battery, smart controllers
 
 #### 3. Generator (Manual control with maintenance)
-- Manual start/stop via `/generator` HTTP endpoint
-- Payload: `{"source_name": "gen_1", "command": "start|stop"}`
+- Manual start/stop via the localized buttons shown after chat activation
 - Auto-generates maintenance windows:
   - Start: shows maintenance window (default +4 hours)
   - Stop: shows next working window (default +1 hour)
@@ -182,15 +181,6 @@ POST /active_ping
 {
   "name": "source_name",
   "state": "online|offline"
-}
-```
-
-**Generator Control** (port 8082):
-```bash
-POST /generator
-{
-  "source_name": "generator_1",
-  "command": "start|stop"
 }
 ```
 
@@ -238,16 +228,16 @@ sudo tail -f /var/log/power_herald/bot.log
 3. (Optional) Daily schedule posted at 07:00
 
 ### Example 2: Generator Activation
-1. Admin/system triggers generator start via `/generator` or HTTP
+1. An activated chat presses `Start Generator`
 2. Notification: "Generator: ONLINE\nMaintenance window: 14:00 - 15:00"
-3. After 4 hours, generator stopped
+3. An activated chat presses `Stop Generator`
 4. Notification: "Generator: OFFLINE\nNext working window: 19:00 onwards"
 
 ### Example 3: Multi-Building Setup
 - Building A subscribed to: Line A, Line B, Generator 1
 - Building B subscribed to: Line C, Generator 2
 - Each receives relevant notifications independently
-- Building A can disable generator notifications via admin
+- Each activated chat receives generator notifications through its own subscription
 
 ## Troubleshooting
 
@@ -269,7 +259,6 @@ sudo tail -f /var/log/power_herald/bot.log
 ### Generator maintenance windows not showing
 - Verify generator source type is "GENERATOR"
 - Check work_duration_minutes and maintenance_duration_minutes in database
-- Ensure notify_generator is enabled for subscription
 
 ## Future Enhancements
 

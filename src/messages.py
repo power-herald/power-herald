@@ -54,9 +54,7 @@ def bot_greeting(chat_id: int, thread_id: int | None) -> str:
 def state_change_message(
     source_name: str,
     state: str,
-    duration: datetime.timedelta | None = None,
-    maintenance_window: tuple[str, str] | None = None,
-    next_working_window: str | None = None,
+    duration: datetime.timedelta | None = None
 ) -> str:
     state_key = state.lower()
     message_key = f"notification.{state_key}"
@@ -64,10 +62,26 @@ def state_change_message(
     if duration:
         duration_key = f"notification.{state_key}_duration"
         parts.append(get_message(duration_key, duration=str(duration).split(".")[0]))
+    return "\n".join(parts)
+
+
+def generator_state_change_message(
+    source_name: str,
+    state: str,
+    duration: datetime.timedelta | None = None,
+    maintenance_window: tuple[str, str] | None = None,
+    next_working_window: str | None = None,
+) -> str:
+    state_key = state.lower()
+    message_key = f"notification.generator_{state_key}"
+    parts = [get_message(message_key, source_name=source_name, state=state.upper())]
+    if duration and state_key == "offline":
+        duration_key = f"notification.generator_{state_key}_duration"
+        parts.append(get_message(duration_key, duration=str(duration).split(".")[0]))
     if maintenance_window:
-        parts.append(get_message("notification.maintenance_window", start=maintenance_window[0], end=maintenance_window[1]))
+        parts.append(get_message("notification.generator_maintenance_window", start=maintenance_window[0], end=maintenance_window[1]))
     if next_working_window:
-        parts.append(get_message("notification.next_working_window", start=next_working_window))
+        parts.append(get_message("notification.generator_next_working_window", start=next_working_window))
     return "\n".join(parts)
 
 

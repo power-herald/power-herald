@@ -91,7 +91,12 @@ async def send_messages(token: str, messages: list[dict], today: bool = True) ->
                 sent_count = 0
                 for chat in chats:
                     try:
-                        await bot.send_message(chat.chat_id, rendered_message, parse_mode="MarkdownV2")
+                        await bot.send_message(
+                            chat.chat_id,
+                            rendered_message,
+                            message_thread_id=chat.thread_id,
+                            parse_mode="MarkdownV2",
+                        )
                         sent_count += 1
                     except Exception:
                         logger.exception("Failed to send outage message to %s", chat.chat_id)

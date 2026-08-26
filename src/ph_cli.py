@@ -103,11 +103,11 @@ def build_parser() -> argparse.ArgumentParser:
     })
     add_entity_commands(commands, "subscriptions", {
         "chat_id": {"required": True, "type": int}, "source_id": {"required": True, "type": int},
-        "enabled": {"type": int}, "notify_generator": {"type": int},
+        "enabled": {"type": int},
     })
     add_entity_commands(commands, "chats", {
-        "chat_id": {"required": True}, "title": {}, "enabled": {"type": int},
-        "is_forum": {"type": int}, "admin": {"type": int},
+        "chat_id": {"required": True}, "title": {}, "thread_id": {"type": int},
+        "enabled": {"type": int}, "is_private": {"type": int},
     })
     add_entity_commands(commands, "maintenances", {
         "source_id": {"type": int}, "enabled": {"type": int}, "comment": {},
@@ -157,7 +157,7 @@ def apply_values(record: Any, arguments: argparse.Namespace) -> None:
             continue
         value = getattr(arguments, column.name, None)
         if value is not None:
-            if column.name in {"enabled", "is_forum", "admin", "notify_generator"}:
+            if column.name in {"enabled", "is_private"}:
                 value = bool(value)
             setattr(record, column.name, value)
 

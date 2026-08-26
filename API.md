@@ -40,58 +40,13 @@ Devices send their power state to this endpoint. Used for active monitoring wher
 
 ---
 
-## Generator Control Endpoint
+## Generator Control
 
-**Port**: 8082 (configurable)  
-**Method**: POST  
-**Path**: `/generator`
+Generator state is controlled from the localized `Start Generator` and `Stop Generator`
+buttons shown to activated chats. The old HTTP endpoint and `/generator` command are
+no longer available. Each transition notifies subscribed, enabled chats and records
+the generator maintenance window.
 
-Manually control generator state and trigger notifications with maintenance windows.
-
-### Request
-```json
-{
-  "source_name": "generator_1",
-  "command": "start|stop"
-}
-```
-
-### Response
-```json
-{
-  "status": "ok"
-}
-```
-
-### Behavior
-
-#### On `start`:
-1. Generator state changes to ONLINE
-2. Notification sent to subscribed chats:
-   - Shows generator is ON
-   - Includes maintenance window: `start_time + work_duration`
-3. GeneratorSession record created with maintenance window timestamps
-
-#### On `stop`:
-1. Generator state changes to OFFLINE
-2. Notification sent to subscribed chats:
-   - Shows generator is OFF
-   - Includes next working window: `stop_time + maintenance_duration`
-3. GeneratorSession record updated with stop time
-
-### Example Usage
-
-```bash
-# Start generator
-curl -X POST http://localhost:8082/generator \
-  -H "Content-Type: application/json" \
-  -d '{"source_name": "gen_main", "command": "start"}'
-
-# Stop generator
-curl -X POST http://localhost:8082/generator \
-  -H "Content-Type: application/json" \
-  -d '{"source_name": "gen_main", "command": "stop"}'
-```
 
 ---
 
@@ -109,13 +64,39 @@ Requests chat activation. Sends activation request to admin chats for manual app
 ### `/approve <chat_id>`
 Approves and activates a chat that requested activation.
 
-**Admin only**: Yes  
+**Admin only**: Yes
 **Args**: 
 - `chat_id`: Telegram chat ID to approve
 
 **Example**: `/approve 123456789`
 
 **Response**: "Chat Building A (123456789) activated."
+
+---
+
+### `/subscribe <chat_id> <source_id>`
+Adds an enabled power source subscription to an activated or pending chat.
+
+**Admin only**: Yes
+**Args**:
+- `chat_id`: Telegram chat ID to subscribe
+- `source_id`: Power source ID
+
+**Example**: `/subscribe 123456789 1`
+
+---
+
+### `/sources`
+Lists all configured power sources, including their IDs, types, and status.
+
+**Admin only**: Yes
+
+---
+
+### `/chats`
+Lists all registered chats and their activation status.
+
+**Admin only**: Yes
 
 ---
 
@@ -137,18 +118,6 @@ Toggle maintenance mode for a source or globally. When enabled, probes and notif
 **Response**: "Maintenance enabled for 1."
 
 ---
-
-### `/generator <source_id> <on|off>`
-Toggle generator event notifications for the current chat.
-
-**Admin only**: Yes  
-**Args**:
-- `source_id`: Generator source ID
-- `on|off`: Enable or disable notifications
-
-**Example**: `/generator 5 on`
-
-**Response**: "Generator notifications for Generator_1 set to on."
 
 ---
 

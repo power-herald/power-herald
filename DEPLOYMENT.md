@@ -8,7 +8,7 @@
 - **Network**: 
   - Outbound HTTPS for Telegram API
   - Inbound HTTPS for webhook (443 → 8080)
-  - Inbound HTTP for active probe & generator (8081-8082, recommended behind firewall)
+  - Inbound HTTP for active probe (8081, recommended behind firewall)
 - **SSL Certificate**: Valid SSL cert for webhook domain (Let's Encrypt recommended)
 
 ## Installation Steps
@@ -97,11 +97,6 @@ server {
         proxy_pass http://127.0.0.1:8081;
     }
 
-    location /generator {
-        auth_basic "Restricted";
-        auth_basic_user_file /etc/nginx/.htpasswd;
-        proxy_pass http://127.0.0.1:8082;
-    }
 }
 ```
 
@@ -169,8 +164,8 @@ address (the `tcp://host:port` form is also accepted).
 INSERT INTO chats (chat_id, title, enabled, is_forum) VALUES
   ('123456789', 'Building A', 1, 0);
 
-INSERT INTO subscriptions (chat_id, source_id, enabled, notify_generator) VALUES
-  (1, 1, 1, 1);  -- Chat 1 subscribed to source 1 (Line A)
+INSERT INTO subscriptions (chat_id, source_id, enabled) VALUES
+  (1, 1, 1);  -- Chat 1 subscribed to source 1 (Line A)
 ```
 
 ### 3. Test Notifications
@@ -184,10 +179,6 @@ curl -X POST http://localhost:8081/active_ping \
   -H "Content-Type: application/json" \
   -d '{"name": "Line B", "state": "offline"}'
 
-# Test generator
-curl -X POST http://localhost:8082/generator \
-  -H "Content-Type: application/json" \
-  -d '{"source_name": "Generator 1", "command": "start"}'
 ```
 
 ## Monitoring
