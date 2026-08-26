@@ -2,56 +2,56 @@
 
 ## Prerequisites
 - Gentoo Linux with OpenRC
-- Python 3.12+ venv in /opt/power_herald
-- User `power_herald` and group `power_herald` created
+- Python 3.12+ venv in /opt/power-herald
+- User `powerherald` and group `powerherald` created
 
 ## Setup Steps
 
 1. Create user and group:
 ```bash
-useradd -m -d /opt/power_herald power_herald
-groupadd power_herald
-usermod -a -G power_herald power_herald
+useradd -m -d /opt/power-herald powerherald
+groupadd powerherald
+usermod -a -G powerherald powerherald
 ```
 
 2. Copy init scripts to /etc/init.d/:
 ```bash
-sudo cp init.d/power_herald /etc/init.d/
-sudo chmod +x /etc/init.d/power_herald
+sudo cp init.d/power-herald /etc/init.d/
+sudo chmod +x /etc/init.d/power-herald
 ```
 
-3. Install project to /opt/power_herald:
+3. Install project to /opt/power-herald:
 ```bash
-sudo mkdir -p /opt/power_herald
-sudo cp -r . /opt/power_herald/
-sudo chown -R power_herald:power_herald /opt/power_herald
+sudo mkdir -p /opt/power-herald
+sudo cp -r . /opt/power-herald/
+sudo chown -R powerherald:powerherald /opt/power-herald
 ```
 
 4. Configure config.yaml:
 ```bash
-sudo cp /opt/power_herald/config.yaml /etc/power_herald/config.yaml
-sudo chown power_herald:power_herald /etc/power_herald/config.yaml
-sudo chmod 600 /etc/power_herald/config.yaml
+sudo cp /opt/power-herald/config.yaml /etc/power-herald/config.yaml
+sudo chown powerherald:powerherald /etc/power-herald/config.yaml
+sudo chmod 600 /etc/power-herald/config.yaml
 ```
 
 5. Enable and start services:
 ```bash
-sudo rc-service power_herald start
+sudo rc-service power-herald start
 
 # Add to default runlevel (optional)
-sudo rc-update add power_herald default
+sudo rc-update add power-herald default
 ```
 
 ## Management
 
 ```bash
 # Check status
-sudo rc-service power_herald status
+sudo rc-service power-herald status
 
 # Stop/restart
-sudo rc-service power_herald stop
-sudo rc-service power_herald restart
+sudo rc-service power-herald stop
+sudo rc-service power-herald restart
 
 # View logs
-sudo tail -f /var/log/power_herald/server.log
+sudo tail -f /var/log/power-herald/server.log
 ```

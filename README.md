@@ -54,8 +54,8 @@ placeholder names intact when customizing a message.
 
 1. **Clone and prepare**:
 ```bash
-git clone <repo> power_herald
-cd power_herald
+git clone <repo> power-herald
+cd power-herald
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -101,9 +101,9 @@ changes, and outage periods are list-only and support
 
 4. **OpenRC installation** (see OPENRC_SETUP.md):
 ```bash
-sudo cp init.d/power_herald /etc/init.d/
-sudo chmod +x /etc/init.d/power_herald
-sudo rc-update add power_herald default
+sudo cp init.d/power-herald /etc/init.d/
+sudo chmod +x /etc/init.d/power-herald
+sudo rc-update add power-herald default
 # Start services...
 ```
 
@@ -194,17 +194,17 @@ POST /active_ping
 ### Daemon Management (OpenRC)
 
 ```bash
-sudo rc-service power_herald start
-sudo rc-service power_herald stop
+sudo rc-service power-herald start
+sudo rc-service power-herald stop
 
 # Restart all
-sudo rc-service power_herald restart
+sudo rc-service power-herald restart
 
 # Check status
-sudo rc-service power_herald status
+sudo rc-service power-herald status
 
 # View logs
-sudo tail -f /var/log/power_herald/bot.log
+sudo tail -f /var/log/power-herald/bot.log
 ```
 
 For debugging, the individual workers remain available as standalone module

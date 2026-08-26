@@ -1,12 +1,12 @@
 #!/sbin/openrc-run
 
 description="Power Herald combined daemon"
-command="/opt/power_herald/venv/bin/python"
+command="/opt/power-herald/venv/bin/python"
 command_args="-m src.server"
-pidfile="/var/run/power_herald.pid"
-user="power_herald"
-group="power_herald"
-directory="/opt/power_herald"
+pidfile="/var/run/power-herald.pid"
+user="powerherald"
+group="powerherald"
+directory="/opt/power-herald"
 
 depend() {
     need net

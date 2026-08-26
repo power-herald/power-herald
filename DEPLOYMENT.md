@@ -17,12 +17,12 @@
 
 ```bash
 # Create service user
-sudo useradd -m -s /sbin/nologin -d /opt/power_herald power_herald
-sudo usermod -a -G power_herald power_herald
+sudo useradd -m -s /sbin/nologin -d /opt/power-herald powerherald
+sudo usermod -a -G powerherald powerherald
 
 # Create directories
-sudo mkdir -p /opt/power_herald /var/log/power_herald
-sudo chown -R power_herald:power_herald /opt/power_herald /var/log/power_herald
+sudo mkdir -p /opt/power-herald /var/log/power-herald
+sudo chown -R powerherald:powerherald /opt/power-herald /var/log/power-herald
 
 # Install Python and dependencies
 sudo emerge -av python:3.12 mysql-connector-python
@@ -33,24 +33,24 @@ sudo emerge -av python:3.12 mysql-connector-python
 ```bash
 # Clone repository
 cd /opt
-sudo git clone <repo_url> power_herald
-sudo chown -R power_herald:power_herald power_herald
-cd power_herald
+sudo git clone <repo_url> power-herald
+sudo chown -R powerherald:powerherald power-herald
+cd power-herald
 
 # Setup venv
-sudo -u power_herald python3 -m venv venv
-sudo -u power_herald venv/bin/pip install --upgrade pip
-sudo -u power_herald venv/bin/pip install -r requirements.txt
+sudo -u powerherald python3 -m venv venv
+sudo -u powerherald venv/bin/pip install --upgrade pip
+sudo -u powerherald venv/bin/pip install -r requirements.txt
 ```
 
 ### 3. Configure Application
 
 ```bash
 # Copy and edit config
-sudo cp config.yaml.example /etc/power_herald/config.yaml
-sudo chown power_herald:power_herald /etc/power_herald/config.yaml
-sudo chmod 600 /etc/power_herald/config.yaml
-sudo nano /etc/power_herald/config.yaml
+sudo cp config.yaml.example /etc/power-herald/config.yaml
+sudo chown powerherald:powerherald /etc/power-herald/config.yaml
+sudo chmod 600 /etc/power-herald/config.yaml
+sudo nano /etc/power-herald/config.yaml
 ```
 
 **Critical config fields**:
@@ -91,7 +91,7 @@ server {
     }
 
     # Restrict internal endpoints
-    location /active_ping {
+    location /ping {
         auth_basic "Restricted";
         auth_basic_user_file /etc/nginx/.htpasswd;
         proxy_pass http://127.0.0.1:8081;
@@ -104,22 +104,22 @@ server {
 
 ```bash
 # Copy init scripts
-sudo cp /opt/power_herald/init.d/power_herald /etc/init.d/
-sudo chmod +x /etc/init.d/power_herald
+sudo cp /opt/power-herald/init.d/power-herald /etc/init.d/
+sudo chmod +x /etc/init.d/power-herald
 
 # Add to default runlevel
-sudo rc-update add power_herald default
+sudo rc-update add power-herald default
 
 # Start services
-sudo rc-service power_herald start
+sudo rc-service power-herald start
 ```
 
 ### 7. Verify Installation
 
 ```bash
 # Check service status
-sudo rc-service power_herald status
-ps aux | grep power_herald
+sudo rc-service power-herald status
+ps aux | grep powerherald
 
 # Test webhook
 curl -I https://your.domain/webhook
@@ -192,17 +192,17 @@ curl -X POST http://localhost:8081/active_ping \
 ### Log Rotation
 
 ```bash
-# /etc/logrotate.d/power_herald
-/var/log/power_herald/*.log {
+# /etc/logrotate.d/power-herald
+/var/log/power-herald/*.log {
     daily
     rotate 14
     compress
     delaycompress
     notifempty
-    create 0640 power_herald power_herald
+    create 0640 powerherald powerherald
     sharedscripts
     postrotate
-        rc-service power_herald restart > /dev/null 2>&1 || true
+        rc-service power-herald restart > /dev/null 2>&1 || true
     endscript
 }
 ```
@@ -212,8 +212,8 @@ curl -X POST http://localhost:8081/active_ping \
 ```bash
 #!/bin/bash
 # Monitor script
-if ! rc-service power_herald status > /dev/null 2>&1; then
-  echo "WARNING: power_herald is not running" | mail -s "Power Herald Alert" admin@example.com
+if ! rc-service power-herald status > /dev/null 2>&1; then
+  echo "WARNING: power-herald is not running" | mail -s "Power Herald Alert" admin@example.com
 fi
 ```
 
@@ -231,8 +231,8 @@ mysql power_herald -e "DELETE FROM state_changes WHERE timestamp < DATE_SUB(NOW(
 
 ### Bot not starting
 ```bash
-sudo rc-service power_herald start
-sudo tail -f /var/log/power_herald/bot.log
+sudo rc-service power-herald start
+sudo tail -f /var/log/power-herald/bot.log
 ```
 
 ### Database connection error
@@ -264,7 +264,7 @@ mysql> SELECT * FROM state_changes ORDER BY timestamp DESC LIMIT 10;
 
 ## Security Considerations
 
-1. **Config file**: Store in `/etc/power_herald/` with 600 permissions
+1. **Config file**: Store in `/etc/power-herald/` with 600 permissions
 2. **Database password**: Use strong password, restrict access to localhost
 3. **Bot token**: Never commit to version control
 4. **HTTP endpoints**: Place behind firewall or reverse proxy with authentication
@@ -281,5 +281,5 @@ mysqldump power_herald > /backup/power_herald_full_$(date +%Y%m%d_%H%M%S).sql
 mysql power_herald < /backup/power_herald_full.sql
 
 # Config backup
-cp /etc/power_herald/config.yaml /backup/config_$(date +%Y%m%d).yaml.bak
+cp /etc/power-herald/config.yaml /backup/config_$(date +%Y%m%d).yaml.bak
 ```
