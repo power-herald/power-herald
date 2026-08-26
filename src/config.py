@@ -2,6 +2,8 @@
 import yaml
 import os
 import datetime as dt
+import logging
+import sys
 from typing import Dict, Any
 from dotenv import load_dotenv
 
@@ -155,12 +157,28 @@ class Config:
     def logging_level(self) -> str:
         return self.get("logging.level", "INFO")
 
+    @property
+    def logging_format(self) -> str:
+        return self.get("logging.format", "%(asctime)s [%(name)s] [%(levelname)s] %(message)s")
+
+
+def configure_logging(settings: Config) -> None:
+    level = getattr(logging, settings.logging_level.upper(), None)
+    if not isinstance(level, int):
+        raise ValueError(f"Invalid logging level: {settings.logging_level}")
+    logging.basicConfig(
+        stream=sys.stdout,
+        level=level,
+        format=settings.logging_format,
+    )
+
 # Global config instance
 config = None
 
 def load_config(config_path: str = "config.yaml") -> Config:
     global config
     config = Config(config_path)
+    configure_logging(config)
     return config
 
 def get_config() -> Config:

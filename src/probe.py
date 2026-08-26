@@ -3,7 +3,6 @@ import datetime
 import logging
 import signal
 import socket
-import sys
 from urllib.parse import urlsplit
 
 import aiohttp
@@ -16,9 +15,9 @@ from src.maintenance import is_maintenance
 from src.models import PingMethod, PowerSource, PowerSourceType, StateChangeType
 from src.state_store import record_state
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-logger = logging.getLogger("passive-prober")
 config = get_config()
+logger = logging.getLogger("passive-prober")
+
 engine = create_engine(config.db_url)
 Session = sessionmaker(bind=engine)
 
@@ -46,7 +45,7 @@ async def ping_host(address: str, timeout_sec: int, method: PingMethod = PingMet
             async with session.get(address, timeout=request_timeout) as response:
                 return response.status == 200
     except Exception as error:
-        logger.warning("Ping failed for %s: %s", address, error)
+        logger.warning("Ping via %s failed for %s: %s", method.value, address, error)
         return False
 
 

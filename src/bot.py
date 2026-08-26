@@ -1,7 +1,6 @@
 # src/bot.py
 import logging
 import signal
-import sys
 from aiogram import Bot, Dispatcher, types
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
@@ -9,10 +8,9 @@ import asyncio
 from src.config import get_config
 from src.messages import bot_greeting
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-logging.getLogger("aiohttp.access").setLevel(logging.WARNING)
-logger = logging.getLogger(__name__)
 config = get_config()
+logger = logging.getLogger("bot")
+logging.getLogger("aiohttp.access").setLevel(logging.WARNING)
 
 bot = Bot(token=config.bot_token)
 dp = Dispatcher()

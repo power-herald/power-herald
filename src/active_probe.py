@@ -2,7 +2,6 @@
 import asyncio
 import logging
 import signal
-import sys
 from aiohttp import web
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
@@ -11,10 +10,10 @@ import datetime
 from src.config import get_config
 from src.state_store import record_state
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-logging.getLogger("aiohttp.access").setLevel(logging.WARNING)
-logger = logging.getLogger("active-prober")
 config = get_config()
+logger = logging.getLogger("active-prober")
+logging.getLogger("aiohttp.access").setLevel(logging.WARNING)
+
 engine = create_engine(config.db_url)
 Session = sessionmaker(bind=engine)
 
@@ -90,5 +89,4 @@ async def main():
         await runner.cleanup()
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
     asyncio.run(main())

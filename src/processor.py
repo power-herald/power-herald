@@ -2,7 +2,6 @@ import asyncio
 import datetime
 import logging
 import signal
-import sys
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -10,12 +9,13 @@ from sqlalchemy.orm import sessionmaker
 from src.config import get_config
 from src.maintenance import is_maintenance
 from src.models import PowerSource, PowerSourceGroup, PowerSourceType, StateChangeType
+from src.notify import bot as notify_bot
 from src.notify import notify_group_state_change, notify_state_change
 from src.state_store import latest_change, latest_state, record_change
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-logger = logging.getLogger("processor")
 config = get_config()
+logger = logging.getLogger("processor")
+
 engine = create_engine(config.db_url)
 Session = sessionmaker(bind=engine)
 
@@ -101,14 +101,17 @@ async def main():
     loop = asyncio.get_running_loop()
     for shutdown_signal in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(shutdown_signal, stop_event.set)
-    logger.info("State processor started")
-    while not stop_event.is_set():
-        await process_sources()
-        try:
-            await asyncio.wait_for(stop_event.wait(), timeout=config.state_processor_interval)
-        except asyncio.TimeoutError:
-            pass
-    logger.info("Shutdown signal received")
+    try:
+        logger.info("State processor started")
+        while not stop_event.is_set():
+            await process_sources()
+            try:
+                await asyncio.wait_for(stop_event.wait(), timeout=config.state_processor_interval)
+            except asyncio.TimeoutError:
+                pass
+        logger.info("Shutdown signal received")
+    finally:
+        await notify_bot.session.close()
 
 
 if __name__ == "__main__":

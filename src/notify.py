@@ -10,9 +10,9 @@ import datetime
 from src.config import get_config
 from src.messages import group_state_change_message, state_change_message
 
+config = get_config()
 logger = logging.getLogger("notifier")
 
-config = get_config()
 engine = create_engine(config.db_url)
 Session = sessionmaker(bind=engine)
 bot = Bot(token=config.bot_token)

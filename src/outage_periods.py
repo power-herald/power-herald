@@ -6,6 +6,8 @@ from src.models import PowerSource, PowerStateChange, OutagePeriod, StateChangeT
 from src.config import get_config
 
 config = get_config()
+logger = logging.getLogger("outage")
+
 engine = create_engine(config.db_url)
 Session = sessionmaker(bind=engine)
 
@@ -52,6 +54,5 @@ def update_outage_periods():
     session.close()
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
     update_outage_periods()
-    logging.info("Outage periods updated.")
+    logger.info("Outage periods updated.")

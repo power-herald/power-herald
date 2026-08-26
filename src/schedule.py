@@ -12,11 +12,10 @@ from src.messages import schedule_message_from_json
 from src.models import Base, Chat, Outage, OutageData
 from src.outage_data import content_hash, fetch_outage_data, message_hash, prepare_messages
 
+config = get_config()
 logger = logging.getLogger("schedule")
 
-
 async def update_once() -> bool:
-    config = get_config()
     logger.info("Starting outage schedule update from %s", config.outage_data_source)
     engine = create_engine(config.db_url)
     Base.metadata.create_all(engine)
@@ -64,7 +63,6 @@ async def update_once() -> bool:
 
 
 async def send_tomorrow_once() -> bool:
-    config = get_config()
     target_date = dt.date.today() + dt.timedelta(days=1)
     engine = create_engine(config.db_url)
     Base.metadata.create_all(engine)
@@ -81,7 +79,6 @@ async def send_messages(token: str, messages: list[dict], today: bool = True) ->
     if not messages:
         logger.info("No changed outage messages to send")
         return
-    config = get_config()
     engine = create_engine(config.db_url)
     bot = Bot(token=token)
     try:
@@ -104,7 +101,6 @@ async def send_messages(token: str, messages: list[dict], today: bool = True) ->
 
 
 async def main() -> None:
-    config = get_config()
     stop_event = asyncio.Event()
     loop = asyncio.get_running_loop()
     for shutdown_signal in (signal.SIGINT, signal.SIGTERM):
@@ -146,5 +142,4 @@ async def main() -> None:
         logger.info("Shutdown signal received")
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
     asyncio.run(main())

@@ -4,11 +4,9 @@ import hashlib
 import json
 from pathlib import Path
 from typing import Any
-
 import requests
 
 from src.config import get_config
-
 
 def fetch_outage_data(
     url: str | None = None,

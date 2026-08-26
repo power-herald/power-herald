@@ -3,13 +3,15 @@ import logging
 from aiohttp import web
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
+from src.config import get_config
 from src.models import PowerSource, PowerSourceType, StateChangeType
 from src.notify import notify_state_change
 from src.state_store import latest_state, record_change, record_state
 import asyncio
 import datetime
 
-logger = logging.getLogger(__name__)
+config = get_config()
+logger = logging.getLogger("generator")
 logging.getLogger("aiohttp.access").setLevel(logging.WARNING)
 
 DB_URL = "mysql+pymysql://user:password@localhost/power_herald"
@@ -58,6 +60,5 @@ def create_app():
     return app
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
     app = create_app()
     web.run_app(app, port=8082)
