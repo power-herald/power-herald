@@ -122,7 +122,7 @@ async def subscribe_cmd(message: types.Message):
         return
 
     session = Session()
-    chat = session.query(Chat).filter_by(chat_id=chat_id).first()
+    chat = session.query(Chat).filter_by(id=chat_id).first()
     source = session.query(PowerSource).filter_by(id=source_id, enabled=True).first()
     if not chat:
         await message.answer(get_message("admin.chat_not_found"))
@@ -181,7 +181,7 @@ async def chats_cmd(message: types.Message):
     lines = [
         get_message(
             "admin.chat_list_item",
-            chat_id=chat.chat_id,
+            chat_id=chat.id,
             title=chat.title or "",
             status="enabled" if chat.enabled else "disabled",
         )
