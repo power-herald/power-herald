@@ -34,7 +34,7 @@ placeholder names intact when customizing a message.
 │   ├── outage_periods.py   # Outage period tracking & duration calculation
 │   ├── maintenance.py      # Maintenance mode management
 │   └── schedule.py         # Scheduled outage integration
-├── init.d/                 # OpenRC init scripts
+├── init.d/                 # OpenRC init script for the combined daemon
 ├── config.yaml             # Configuration file (secrets & settings)
 └── README.md               # This file
 ```
@@ -100,9 +100,9 @@ changes, and outage periods are list-only and support
 
 4. **OpenRC installation** (see OPENRC_SETUP.md):
 ```bash
-sudo cp init.d/power_herald_* /etc/init.d/
-sudo chmod +x /etc/init.d/power_herald_*
-sudo rc-update add power_herald_bot default
+sudo cp init.d/power_herald /etc/init.d/
+sudo chmod +x /etc/init.d/power_herald
+sudo rc-update add power_herald default
 # Start services...
 ```
 
@@ -191,22 +191,22 @@ POST /active_ping
 ### Daemon Management (OpenRC)
 
 ```bash
-# Start/stop individual services
-sudo rc-service power_herald_bot start
-sudo rc-service power_herald_passive_probe start
-sudo rc-service power_herald_active_probe start
-sudo rc-service power_herald_processor start
-sudo rc-service power_herald_schedule start
+sudo rc-service power_herald start
+sudo rc-service power_herald stop
 
 # Restart all
-sudo rc-service power_herald_* restart
+sudo rc-service power_herald restart
 
 # Check status
-sudo rc-service power_herald_bot status
+sudo rc-service power_herald status
 
 # View logs
 sudo tail -f /var/log/power_herald/bot.log
 ```
+
+For debugging, the individual workers remain available as standalone module
+entry points, for example `venv/bin/python -m src.bot` or
+`venv/bin/python -m src.processor`.
 
 ## Database Schema
 

@@ -1,11 +1,9 @@
 #!/sbin/openrc-run
-# OpenRC init script for power_herald_active_probe
-# Place in /etc/init.d/power_herald_active_probe
 
-description="Power Herald Active Probe HTTP Server"
+description="Power Herald combined daemon"
 command="/opt/power_herald/venv/bin/python"
-command_args="-m src.active_probe"
-pidfile="/var/run/power_herald_active_probe.pid"
+command_args="-m src.server"
+pidfile="/var/run/power_herald.pid"
 user="power_herald"
 group="power_herald"
 directory="/opt/power_herald"
@@ -22,7 +20,7 @@ start_pre() {
 }
 
 start() {
-    ebegin "Starting Power Herald Active Probe"
+    ebegin "Starting Power Herald"
     cd "$directory"
     start-stop-daemon --start --pidfile "$pidfile" \
         --user "$user" --group "$group" \
@@ -32,7 +30,7 @@ start() {
 }
 
 stop() {
-    ebegin "Stopping Power Herald Active Probe"
-    start-stop-daemon --stop --pidfile "$pidfile"
+    ebegin "Stopping Power Herald"
+    start-stop-daemon --stop --pidfile "$pidfile" --retry TERM/30/KILL/5
     eend $?
 }

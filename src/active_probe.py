@@ -1,7 +1,6 @@
 # src/active_probe.py
 import asyncio
 import logging
-import signal
 from aiohttp import web
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
@@ -9,6 +8,7 @@ from src.models import PowerSource, PowerSourceType, StateChangeType
 import datetime
 from src.config import get_config
 from src.state_store import record_change, record_state
+from src.lifecycle import use_stop_event
 
 config = get_config()
 logger = logging.getLogger("active-prober")
@@ -40,43 +40,36 @@ async def handle_active_ping(request):
     source_name = data.get("name")
     state = data.get("state")  # 'online' or 'offline'
     logger.debug("Ping received from %s: source=%s, state=%s", request.remote, source_name, state)
-    session = Session()
-    source = session.query(PowerSource).filter_by(name=source_name, type=PowerSourceType.ACTIVE, enabled=True).first()
-    from src.maintenance import is_maintenance
-    maintenance, _ = is_maintenance(source.id if source else None)
-    if maintenance:
-        logger.warning("Active ping rejected for %s: maintenance mode enabled", source_name)
-        session.close()
-        return web.json_response({"error": "Maintenance mode enabled"}, status=403)
-    if not source:
-        logger.warning("Active ping rejected: active source not found or disabled: %s", source_name)
-        session.close()
-        return web.json_response({"error": "Source not found or not active"}, status=404)
-    try:
-        state_enum = StateChangeType(state)
-    except Exception:
-        logger.warning("Active ping rejected for %s: invalid state=%s", source_name, state)
-        session.close()
-        return web.json_response({"error": "Invalid state"}, status=400)
-    timestamp = datetime.datetime.now(datetime.timezone.utc)
-    _, changed = record_state(session, source.id, state_enum, timestamp)
-    if changed:
-        record_change(session, source.id, state_enum, timestamp)
-    session.commit()
-    logger.info("Source %s is %s", source.name, state_enum.value)
-    session.close()
-    return web.json_response({"status": "ok"})
+    with Session() as session:
+        source = session.query(PowerSource).filter_by(name=source_name, type=PowerSourceType.ACTIVE, enabled=True).first()
+        from src.maintenance import is_maintenance
+        maintenance, _ = is_maintenance(source.id if source else None)
+        if maintenance:
+            logger.warning("Active ping rejected for %s: maintenance mode enabled", source_name)
+            return web.json_response({"error": "Maintenance mode enabled"}, status=403)
+        if not source:
+            logger.warning("Active ping rejected: active source not found or disabled: %s", source_name)
+            return web.json_response({"error": "Source not found or not active"}, status=404)
+        try:
+            state_enum = StateChangeType(state)
+        except Exception:
+            logger.warning("Active ping rejected for %s: invalid state=%s", source_name, state)
+            return web.json_response({"error": "Invalid state"}, status=400)
+        timestamp = datetime.datetime.now(datetime.timezone.utc)
+        _, changed = record_state(session, source.id, state_enum, timestamp)
+        if changed:
+            record_change(session, source.id, state_enum, timestamp)
+        session.commit()
+        logger.info("Source %s is %s", source.name, state_enum.value)
+        return web.json_response({"status": "ok"})
 
 def create_app():
     app = web.Application(middlewares=[cors_middleware])
     app.router.add_post(config.active_probe_endpoint, handle_active_ping)
     return app
 
-async def main():
-    stop_event = asyncio.Event()
-    loop = asyncio.get_running_loop()
-    for shutdown_signal in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(shutdown_signal, stop_event.set)
+async def main(stop_event=None):
+    stop_event = use_stop_event(stop_event)
 
     app = create_app()
     runner = web.AppRunner(app)
@@ -89,6 +82,7 @@ async def main():
         logger.info("Shutdown signal received")
     finally:
         await runner.cleanup()
+        engine.dispose()
 
 if __name__ == "__main__":
     asyncio.run(main())

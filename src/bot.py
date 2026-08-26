@@ -1,6 +1,5 @@
 # src/bot.py
 import logging
-import signal
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
@@ -13,6 +12,7 @@ from src.models import Chat
 from src.config import get_config
 from src.messages import bot_greeting
 from src.admin import chat_is_admin, chat_is_enabled, generator_keyboard, router as admin_router
+from src.lifecycle import use_stop_event
 
 config = get_config()
 logger = logging.getLogger("bot")
@@ -65,18 +65,18 @@ async def configure_command_menu() -> None:
         scope=BotCommandScopeAllChatAdministrators(),
     )
 
-    session = Session()
-    chats = session.query(Chat).filter_by(enabled=True).all()
-    for chat in chats:
-        await bot.set_my_commands(
-            activated_user_commands if chat.is_private else [],
-            scope=BotCommandScopeChat(chat_id=chat.chat_id),
-        )
-    for chat_id in config.admin_chat_ids:
-        await bot.set_my_commands(
-            admin_commands,
-            scope=BotCommandScopeChat(chat_id=chat_id),
-        )
+    with Session() as session:
+        chats = session.query(Chat).filter_by(enabled=True).all()
+        for chat in chats:
+            await bot.set_my_commands(
+                activated_user_commands if chat.is_private else [],
+                scope=BotCommandScopeChat(chat_id=chat.chat_id),
+            )
+        for chat_id in config.admin_chat_ids:
+            await bot.set_my_commands(
+                admin_commands,
+                scope=BotCommandScopeChat(chat_id=chat_id),
+            )
 
 
 async def on_startup(app):
@@ -88,14 +88,10 @@ async def on_shutdown(app):
     await bot.delete_webhook()
     logger.info("Webhook deleted")
 
-async def main():
+async def main(stop_event=None):
+    stop_event = use_stop_event(stop_event)
     logger.info("Bot webhook server starting on %s:%s%s", config.webhook_address, config.webhook_port, config.webhook_path)
     logger.info("Bot webhook URL: %s", config.webhook_url)
-    stop_event = asyncio.Event()
-    loop = asyncio.get_running_loop()
-    for shutdown_signal in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(shutdown_signal, stop_event.set)
-
     app = web.Application()
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=config.webhook_path)
     app.on_startup.append(on_startup)
@@ -114,6 +110,7 @@ async def main():
             await runner.cleanup()
         finally:
             await bot.session.close()
+            engine.dispose()
 
 if __name__ == "__main__":
     asyncio.run(main())

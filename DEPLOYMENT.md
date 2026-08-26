@@ -104,29 +104,21 @@ server {
 
 ```bash
 # Copy init scripts
-sudo cp /opt/power_herald/init.d/power_herald_* /etc/init.d/
-sudo chmod +x /etc/init.d/power_herald_*
+sudo cp /opt/power_herald/init.d/power_herald /etc/init.d/
+sudo chmod +x /etc/init.d/power_herald
 
 # Add to default runlevel
-sudo rc-update add power_herald_bot default
-sudo rc-update add power_herald_passive_probe default
-sudo rc-update add power_herald_active_probe default
-sudo rc-update add power_herald_processor default
-sudo rc-update add power_herald_schedule default
+sudo rc-update add power_herald default
 
 # Start services
-sudo rc-service power_herald_bot start
-sudo rc-service power_herald_passive_probe start
-sudo rc-service power_herald_active_probe start
-sudo rc-service power_herald_processor start
-sudo rc-service power_herald_schedule start
+sudo rc-service power_herald start
 ```
 
 ### 7. Verify Installation
 
 ```bash
 # Check service status
-sudo rc-service power_herald_bot status
+sudo rc-service power_herald status
 ps aux | grep power_herald
 
 # Test webhook
@@ -210,7 +202,7 @@ curl -X POST http://localhost:8081/active_ping \
     create 0640 power_herald power_herald
     sharedscripts
     postrotate
-        rc-service power_herald_* restart > /dev/null 2>&1 || true
+        rc-service power_herald restart > /dev/null 2>&1 || true
     endscript
 }
 ```
@@ -220,11 +212,9 @@ curl -X POST http://localhost:8081/active_ping \
 ```bash
 #!/bin/bash
 # Monitor script
-for service in power_herald_bot power_herald_passive_probe power_herald_active_probe power_herald_processor; do
-    if ! rc-service $service status > /dev/null 2>&1; then
-        echo "WARNING: $service is not running" | mail -s "Power Herald Alert" admin@example.com
-    fi
-done
+if ! rc-service power_herald status > /dev/null 2>&1; then
+  echo "WARNING: power_herald is not running" | mail -s "Power Herald Alert" admin@example.com
+fi
 ```
 
 ### Database Maintenance
@@ -241,7 +231,7 @@ mysql power_herald -e "DELETE FROM state_changes WHERE timestamp < DATE_SUB(NOW(
 
 ### Bot not starting
 ```bash
-sudo rc-service power_herald_bot start
+sudo rc-service power_herald start
 sudo tail -f /var/log/power_herald/bot.log
 ```
 

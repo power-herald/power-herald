@@ -1,7 +1,6 @@
 import asyncio
 import datetime
 import logging
-import signal
 import socket
 from urllib.parse import urlsplit
 
@@ -14,6 +13,7 @@ from src.config import get_config
 from src.maintenance import is_maintenance
 from src.models import PowerSource, PowerSourceType, StateChangeType
 from src.state_store import record_change, record_state
+from src.lifecycle import use_stop_event
 
 config = get_config()
 logger = logging.getLogger("passive-prober")
@@ -85,19 +85,19 @@ async def probe_passive_sources():
         session.close()
 
 
-async def main():
-    stop_event = asyncio.Event()
-    loop = asyncio.get_running_loop()
-    for shutdown_signal in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(shutdown_signal, stop_event.set)
+async def main(stop_event=None):
+    stop_event = use_stop_event(stop_event)
     logger.info("Passive probe started")
-    while not stop_event.is_set():
-        await probe_passive_sources()
-        try:
-            await asyncio.wait_for(stop_event.wait(), timeout=config.passive_probe_interval)
-        except asyncio.TimeoutError:
-            pass
-    logger.info("Shutdown signal received")
+    try:
+        while not stop_event.is_set():
+            await probe_passive_sources()
+            try:
+                await asyncio.wait_for(stop_event.wait(), timeout=config.passive_probe_interval)
+            except asyncio.TimeoutError:
+                pass
+        logger.info("Shutdown signal received")
+    finally:
+        engine.dispose()
 
 
 if __name__ == "__main__":

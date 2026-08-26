@@ -1,7 +1,6 @@
 import asyncio
 import datetime as dt
 import logging
-import signal
 
 from aiogram import Bot
 from sqlalchemy import create_engine
@@ -18,6 +17,7 @@ from src.models import (
     OutageNotificationType,
 )
 from src.outage_data import content_hash, fetch_outage_data, message_hash, prepare_messages
+from src.lifecycle import use_stop_event
 
 config = get_config()
 logger = logging.getLogger("schedule")
@@ -133,11 +133,8 @@ async def send_messages(token: str, messages: list[dict], today: bool = True) ->
         await bot.session.close()
 
 
-async def main() -> None:
-    stop_event = asyncio.Event()
-    loop = asyncio.get_running_loop()
-    for shutdown_signal in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(shutdown_signal, stop_event.set)
+async def main(stop_event=None) -> None:
+    stop_event = use_stop_event(stop_event)
 
     logger.info("Schedule poster started")
     try:
