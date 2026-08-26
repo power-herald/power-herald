@@ -36,6 +36,7 @@ placeholder names intact when customizing a message.
 │   └── schedule.py         # Scheduled outage integration
 ├── init.d/                 # OpenRC init script for the combined daemon
 ├── config.yaml             # Configuration file (secrets & settings)
+├── locale.yaml             # Localization for user messages
 └── README.md               # This file
 ```
 

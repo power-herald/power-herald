@@ -74,6 +74,10 @@ class Config:
         return dt.datetime.now(self.timezone)
 
     @property
+    def locale_file(self) -> str:
+        return self.get("locale_file", "./locale.yaml")
+
+    @property
     def admin_chat_ids(self) -> list:
         ids = os.getenv("ADMIN_CHAT_IDS")
         if ids:

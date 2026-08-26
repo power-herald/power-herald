@@ -7,6 +7,7 @@ telegram:
   webhook_secret: "YOUR_WEBHOOK_SECRET"
 
 timezone: "Europe/Kyiv"
+locale_file: "./locale.yaml"
 
 database:
   driver: "mysql+pymysql"
@@ -37,7 +38,7 @@ probing:
 outages:
   source: "file"
   json_url: "https://raw.githubusercontent.com/Baskerville42/outage-data-ua/refs/heads/main/data/kyiv.json"
-  json_file: "./kyiv-test.json"
+  json_file: "./assets/kyiv-test.json"
   delay_seconds: 1800
   schedule_send_time: "21:00"
   gpvs:

@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 
 from src.config import get_config
 from src.maintenance import is_maintenance
-from src.models import PowerSource, PowerSourceType, StateChangeType
+from src.models import PowerSource, PowerSourceType, StateChangeType, PingMethod
 from src.state_store import record_change, record_state
 from src.lifecycle import use_stop_event
 

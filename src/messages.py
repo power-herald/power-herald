@@ -2,17 +2,12 @@ import datetime
 import os
 from pathlib import Path
 from typing import Any
-
 import yaml
 
 from src.config import get_config
 
-
-LOCALE_PATH = Path(__file__).resolve().parent.parent / "locale.yaml"
-
-
 def _load_locale() -> dict[str, Any]:
-    locale_path = Path(os.getenv("LOCALE_PATH", LOCALE_PATH))
+    locale_path = Path(get_config().locale_file)
     with locale_path.open("r", encoding="utf-8") as locale_file:
         return yaml.safe_load(locale_file) or {}
 
