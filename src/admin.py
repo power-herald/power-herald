@@ -93,7 +93,7 @@ async def approve_cmd(message: types.Message):
         await message.answer(response_message)
         activation_message = get_message("admin.chat_activated_for_user")
         await message.bot.send_message(
-            chat_id,
+            chat.chat_id,
             activation_message,
             message_thread_id=chat.thread_id,
             reply_markup=generator_keyboard() if chat.is_private else None,
