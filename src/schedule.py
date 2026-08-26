@@ -9,7 +9,14 @@ from sqlalchemy.orm import sessionmaker
 
 from src.config import get_config
 from src.messages import schedule_message_from_json
-from src.models import Base, Chat, Outage, OutageData
+from src.models import (
+    Base,
+    Chat,
+    Outage,
+    OutageData,
+    OutageNotification,
+    OutageNotificationType,
+)
 from src.outage_data import content_hash, fetch_outage_data, message_hash, prepare_messages
 
 config = get_config()
@@ -63,14 +70,35 @@ async def update_once() -> bool:
 
 
 async def send_tomorrow_once() -> bool:
+    today = dt.date.today()
     target_date = dt.date.today() + dt.timedelta(days=1)
     engine = create_engine(config.db_url)
     Base.metadata.create_all(engine)
     with sessionmaker(bind=engine)() as session:
+        previous_notification = (
+            session.query(OutageNotification)
+            .filter_by(type=OutageNotificationType.TOMORROW)
+            .order_by(OutageNotification.posted_at.desc())
+            .first()
+        )
+        if previous_notification and previous_notification.posted_at.date() == today:
+            logger.info("Tomorrow's outage schedule was already sent for %s", today)
+            return False
         latest = session.query(OutageData).order_by(OutageData.id.desc()).first()
+        if latest is None:
+            logger.info("No outage data available; skipping tomorrow's schedule")
+            return False
         messages = list(prepare_messages(latest.json, config.gpvs, today=target_date).values())
 
     await send_messages(config.bot_token, messages, today=False)
+    with sessionmaker(bind=engine)() as session:
+        session.add(
+            OutageNotification(
+                posted_at=dt.datetime.now(dt.timezone.utc),
+                type=OutageNotificationType.TOMORROW,
+            )
+        )
+        session.commit()
     logger.info("Tomorrow's outage schedule sent for %s", target_date)
     return True
 

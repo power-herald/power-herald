@@ -135,3 +135,10 @@ CREATE TABLE IF NOT EXISTS outages (
     PRIMARY KEY (id),
     KEY ix_outages_name_id (name, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS outage_notifications (
+    id INT NOT NULL AUTO_INCREMENT,
+    posted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    type ENUM('TOMORROW') NOT NULL,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

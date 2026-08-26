@@ -148,3 +148,16 @@ class Outage(Base):
     )
     message_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     message: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+class OutageNotificationType(enum.Enum):
+    TOMORROW = "tomorrow"
+
+class OutageNotification(Base):
+    __tablename__ = 'outage_notifications'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    posted_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    type: Mapped[OutageNotificationType] = mapped_column(
+        Enum(OutageNotificationType), nullable=False
+    )
