@@ -154,7 +154,9 @@ async def main(stop_event=None) -> None:
                 config.outage_update_interval_seconds,
             )
             now = config.now()
-            next_schedule = dt.datetime.combine(now.date(), config.outage_schedule_send_time)
+            next_schedule = dt.datetime.combine(
+                now.date(), config.outage_schedule_send_time, tzinfo=now.tzinfo
+            )
             if now >= next_schedule:
                 next_schedule += dt.timedelta(days=1)
             wait_seconds = min(
