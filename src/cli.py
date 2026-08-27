@@ -95,7 +95,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_entity_commands(commands, "sources", {
         "name": {"required": True}, "type": {"required": True, "type": lambda value: enum_value(PowerSourceType, value)},
         "address": {}, "ping_method": {"type": lambda value: enum_value(PingMethod, value)},
-        "enabled": {"type": int}, "description": {}, "work_duration_minutes": {"type": int},
+        "enabled": {"type": int}, "is_generator": {"type": int}, "description": {}, "work_duration_minutes": {"type": int},
         "maintenance_duration_minutes": {"type": int},
     })
     add_entity_commands(commands, "group-sources", {
@@ -108,7 +108,7 @@ def build_parser() -> argparse.ArgumentParser:
     })
     add_entity_commands(commands, "chats", {
         "chat_id": {"required": True}, "title": {}, "thread_id": {"type": int},
-        "enabled": {"type": int}, "is_private": {"type": int},
+        "enabled": {"type": int}, "is_private": {"type": int}, "source_id": {"type": int},
     })
     add_entity_commands(commands, "maintenances", {
         "source_id": {"type": int}, "enabled": {"type": int}, "comment": {},
@@ -163,7 +163,7 @@ def apply_values(record: Any, arguments: argparse.Namespace) -> None:
             continue
         value = getattr(arguments, column.name, None)
         if value is not None:
-            if column.name in {"enabled", "is_private"}:
+            if column.name in {"enabled", "is_private", "is_generator"}:
                 value = bool(value)
             setattr(record, column.name, value)
 
@@ -174,7 +174,7 @@ def apply_source_type_values(source: PowerSource, arguments: argparse.Namespace)
         subtype = source.passive
         fields = ("address", "ping_method")
         subtype_model = PassiveSource
-    elif source.type == PowerSourceType.GENERATOR:
+    elif source.type == PowerSourceType.MANUAL and source.is_generator:
         source.passive = None
         subtype = source.generator
         fields = ("work_duration_minutes", "maintenance_duration_minutes")

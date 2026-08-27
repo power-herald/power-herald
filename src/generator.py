@@ -19,7 +19,7 @@ async def set_generator_state(source_id: int, state: StateChangeType) -> bool:
     """Change a generator state and notify subscribed chats."""
     session = Session()
     source = session.query(PowerSource).filter_by(
-        id=source_id, type=PowerSourceType.GENERATOR, enabled=True
+        id=source_id, type=PowerSourceType.MANUAL, enabled=True
     ).first()
     if not source:
         session.close()

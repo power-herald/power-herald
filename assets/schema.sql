@@ -11,8 +11,9 @@ USE power_herald;
 CREATE TABLE IF NOT EXISTS power_sources (
     id INT NOT NULL AUTO_INCREMENT,
     name VARCHAR(128) NOT NULL,
-    type ENUM('ACTIVE', 'PASSIVE', 'GENERATOR') NOT NULL,
+    type ENUM('ACTIVE', 'PASSIVE', 'MANUAL') NOT NULL,
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    is_generator BOOLEAN NOT NULL DEFAULT FALSE,
     description TEXT NULL,
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -61,8 +62,11 @@ CREATE TABLE IF NOT EXISTS chats (
     thread_id INT NULL,
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
     is_private BOOLEAN NOT NULL DEFAULT FALSE,
+    source_id INT NULL,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_chats_chat_id (chat_id)
+    UNIQUE KEY uq_chats_chat_id (chat_id),
+    CONSTRAINT fk_chats_source
+        FOREIGN KEY (source_id) REFERENCES power_sources (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS state_changes (

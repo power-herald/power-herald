@@ -55,7 +55,12 @@ the generator maintenance window.
 All commands are available only to authorized admin chats (configured in `config.yaml`).
 
 ### `/activate`
-Requests chat activation. Sends activation request to admin chats for manual approval.
+Requests chat activation for a manual generator source. Sends activation request to admin chats for manual approval.
+
+**Args**:
+- `source_id`: Enabled manual source
+
+**Example**: `/activate 3`
 
 **Response**: "Activation request sent to admin."
 

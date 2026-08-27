@@ -91,6 +91,27 @@ async def activate_cmd(message: types.Message):
         _log_command_warning(message, "/activate", "chat already activated")
         await message.answer(get_message("admin.error.chat_already_activated"))
         return
+    source_id = None
+    if message.chat.type == "private":
+        args = message.text.split()
+        if len(args) < 2:
+            _log_command_warning(message, "/activate", "missing source ID")
+            await message.answer(get_message("bot.usage.activate"))
+            return
+        try:
+            source_id = int(args[1])
+        except ValueError:
+            _log_command_warning(message, "/activate", "invalid source ID")
+            await message.answer(get_message("admin.error.generator_not_found"))
+            return
+        with Session() as validation_session:
+            source = validation_session.query(PowerSource).filter_by(
+                id=source_id, type=PowerSourceType.MANUAL, enabled=True
+            ).first()
+        if source is None:
+            _log_command_warning(message, "/activate", "generator source not found or disabled")
+            await message.answer(get_message("admin.error.generator_not_found"))
+            return
     session = Session()
     chat_id = str(message.chat.id)
     chat = session.query(Chat).filter_by(chat_id=chat_id).first()
@@ -101,16 +122,21 @@ async def activate_cmd(message: types.Message):
             thread_id=message.message_thread_id,
             is_private=message.chat.type == "private",
             enabled=False,
+            source_id=source_id,
         )
         session.add(chat)
     else:
         chat.title = message.chat.title or ""
         chat.thread_id = message.message_thread_id
         chat.is_private = message.chat.type == "private"
+        chat.source_id = source_id
     session.commit()
     # Notify admin
     for admin_id in config.admin_chat_ids:
-        activation_message = get_message("admin.activation_requested", title=chat.title, chat_id=chat.id)
+        activation_message = get_message(
+            "admin.activation_requested", title=chat.title, chat_id=chat.id,
+            source_id=chat.source_id, source_name=chat.source.name
+        )
         await message.bot.send_message(admin_id, activation_message)
     response_message = get_message("admin.activation_request_sent")
     await message.answer(response_message)
@@ -293,8 +319,11 @@ async def generator_cmd(message: types.Message):
         await message.answer(get_message("admin.error.generator_private_only"))
         return
     session = Session()
+    chat = session.query(Chat).filter_by(chat_id=str(message.chat.id), enabled=True).first()
     source = session.query(PowerSource).filter_by(
-        type=PowerSourceType.GENERATOR, enabled=True
+        id=chat.source_id if chat else None,
+        type=PowerSourceType.MANUAL,
+        enabled=True,
     ).first()
     session.close()
     if not source:
@@ -312,17 +341,21 @@ async def _generator_state_cmd(message: types.Message, state: StateChangeType):
     session = Session()
     chat = session.query(Chat).filter_by(chat_id=str(message.chat.id), enabled=True).first()
     source = session.query(PowerSource).filter_by(
-        type=PowerSourceType.GENERATOR, enabled=True
+        id=chat.source_id if chat else None,
+        type=PowerSourceType.MANUAL,
+        enabled=True,
     ).first()
     session.close()
-    if (not chat or not source) and not chat_is_admin(message.chat.id):
+    if not chat or not source:
         _log_command_warning(message, command, "not authorized or generator source unavailable")
         response_message = get_message("admin.error.not_authorized") if not chat else get_message("admin.error.generator_not_found")
         await message.answer(response_message)
         return
     changed = await set_generator_state(source.id, state)
     status_key = "generator.started" if state == StateChangeType.ONLINE else "generator.stopped"
-    status = get_message(status_key, source_name=source.name) if changed else get_message("generator.already_in_state", state=state.value)
+    status = get_message(status_key, source_name=source.name) if changed else get_message(
+        "generator.already_in_state", source_name=source.name, state=state.value
+    )
     await message.answer(status, reply_markup=generator_keyboard())
 
 

@@ -15,7 +15,7 @@ class Base(DeclarativeBase):
 class PowerSourceType(enum.Enum):
     ACTIVE = "active"       # Device pings bot
     PASSIVE = "passive"     # Bot pings device
-    GENERATOR = "generator" # Generator (manual activation, maintenance scheduling)
+    MANUAL = "manual"       # State is controlled manually by a user
 
 class PingMethod(enum.Enum):
     HTTP = "http"
@@ -28,6 +28,7 @@ class PowerSource(Base):
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     type: Mapped[PowerSourceType] = mapped_column(Enum(PowerSourceType), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_generator: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     passive: Mapped[PassiveSource | None] = relationship(
         back_populates='source', uselist=False, cascade='all, delete-orphan'
@@ -112,6 +113,8 @@ class Chat(Base):
     thread_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     is_private: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    source_id: Mapped[int | None] = mapped_column(ForeignKey('power_sources.id'), nullable=True)
+    source: Mapped[PowerSource | None] = relationship()
 
 class Subscription(Base):
     __tablename__ = 'subscriptions'

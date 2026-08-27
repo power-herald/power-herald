@@ -30,7 +30,7 @@ async def notify_state_change(source_id: int, state: StateChangeType, timestamp:
         subs = session.query(Subscription).filter_by(source_id=source.id, enabled=True).all()
         maintenance_window = None
         next_working_window = None
-        if source.type == PowerSourceType.GENERATOR and source.generator is not None:
+        if source.is_generator and source.generator is not None:
             if timestamp.tzinfo is None or timestamp.utcoffset() is None:
                 timestamp = timestamp.replace(tzinfo=config.timezone)
             else:
@@ -52,7 +52,7 @@ async def notify_state_change(source_id: int, state: StateChangeType, timestamp:
                 Period.finished_at.isnot(None)
             ).order_by(Period.started_at.desc()).first()
             duration = period.finished_at - period.started_at if period and period.finished_at else None
-            if source.type != PowerSourceType.GENERATOR:
+            if not source.is_generator:
                 msg = state_change_message(source.name, source.description, state.value, duration)
             else:
                 msg = generator_state_change_message(

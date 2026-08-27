@@ -1,6 +1,7 @@
 bot:
   greeting: "Hello! This is a Power Herald bot.\nChat ID is: {chat_id}\nThread ID is: {thread_id}"
   usage:
+    activate: "Usage: /activate <source_id>"
     approve: "Usage: /approve <chat_id>"
     subscribe: "Usage: /subscribe <chat_id> <source_id>"
     maintenance: "Usage: /maintenance <source_id|global> <on|off> [comment]"
@@ -15,7 +16,7 @@ admin:
     no_chats: "No chats found."
     generator_private_only: "Generator control is available only in private chats."
     generator_not_found: "Generator source not found."
-  activation_requested: "Activation requested for chat [{chat_id}] {title} "
+  activation_requested: "Activation requested for chat [{chat_id}] {title} for source [{source_id}] {source_name}."
   activation_request_sent: "Activation request sent to admin."
   chat_activated: "Chat [{chat_id}] {title} activated."
   chat_activated_for_user: "Your chat is now activated!"
