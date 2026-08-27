@@ -89,7 +89,7 @@ async def process_sources():
                 notifications.append((None, None, [(source, state)]))
         session.commit()
 
-        logger.info("Committed state changes; notifications pending: %s", len(notifications))
+        logger.debug("Committed state changes; notifications pending: %s", len(notifications))
         for group, enabled_sources, changed in notifications:
             if group and len(changed) == len(enabled_sources) and len({state for _, state in changed}) == 1:
                 logger.warning("Sending grouped notification for %s sources in %s", len(changed), group.name)
