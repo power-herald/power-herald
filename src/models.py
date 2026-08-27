@@ -150,6 +150,7 @@ class Outage(Base):
     message: Mapped[dict] = mapped_column(JSON, nullable=False)
 
 class OutageNotificationType(enum.Enum):
+    TODAY = "today"
     TOMORROW = "tomorrow"
 
 class OutageNotification(Base):

@@ -152,14 +152,24 @@ class Config:
         return value
 
     @property
-    def outage_schedule_send_time(self) -> dt.time:
-        value = self.get("outages.schedule_send_time", "21:00")
+    def outage_schedule_send_time_tomorrow(self) -> dt.time:
+        value = self.get("outages.schedule_send_time.tomorrow", "21:00")
         if not isinstance(value, str):
-            raise ValueError("outages.schedule_send_time must be in HH:MM format")
+            raise ValueError("outages.schedule_send_time.tomorrow must be in HH:MM format")
         try:
             return dt.datetime.strptime(value, "%H:%M").time()
         except ValueError as error:
-            raise ValueError("outages.schedule_send_time must be in HH:MM format") from error
+            raise ValueError("outages.schedule_send_time.tomorrow must be in HH:MM format") from error
+
+    @property
+    def outage_schedule_send_time_today(self) -> dt.time:
+        value = self.get("outages.schedule_send_time.today", "06:00")
+        if not isinstance(value, str):
+            raise ValueError("outages.schedule_send_time.today must be in HH:MM format")
+        try:
+            return dt.datetime.strptime(value, "%H:%M").time()
+        except ValueError as error:
+            raise ValueError("outages.schedule_send_time.today must be in HH:MM format") from error
 
     @property
     def gpvs(self) -> list[dict[str, str]]:

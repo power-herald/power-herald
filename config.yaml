@@ -40,7 +40,9 @@ outages:
   json_url: "https://raw.githubusercontent.com/Baskerville42/outage-data-ua/refs/heads/main/data/kyiv.json"
   json_file: "./assets/kyiv-test.json"
   delay_seconds: 1800
-  schedule_send_time: "21:00"
+  schedule_send_time:
+    today: "06:00"
+    tomorrow: "21:00"
   gpvs:
     - name: "Kyiv GPV 37.1"
       id: "GPV37.1"

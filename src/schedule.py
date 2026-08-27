@@ -69,37 +69,43 @@ async def update_once() -> bool:
     return True
 
 
-async def send_tomorrow_once() -> bool:
+async def send_schedule_once(
+    notification_type: OutageNotificationType, target_date: dt.date
+) -> bool:
     today = config.now().date()
-    target_date = today + dt.timedelta(days=1)
     engine = create_engine(config.db_url)
     Base.metadata.create_all(engine)
     with sessionmaker(bind=engine)() as session:
         previous_notification = (
             session.query(OutageNotification)
-            .filter_by(type=OutageNotificationType.TOMORROW)
+            .filter_by(type=notification_type)
             .order_by(OutageNotification.posted_at.desc())
             .first()
         )
         if previous_notification and previous_notification.posted_at.date() == today:
-            logger.info("Tomorrow's outage schedule was already sent for %s", today)
+            logger.info("%s outage schedule was already sent for %s", notification_type.value, today)
             return False
         latest = session.query(OutageData).order_by(OutageData.id.desc()).first()
         if latest is None:
-            logger.info("No outage data available; skipping tomorrow's schedule")
+            logger.info("No outage data available; skipping %s outage schedule", notification_type.value)
             return False
         messages = list(prepare_messages(latest.json, config.gpvs, today=target_date).values())
 
-    await send_messages(config.bot_token, messages, today=False, date=target_date)
+    await send_messages(
+        config.bot_token,
+        messages,
+        today=notification_type is OutageNotificationType.TODAY,
+        date=target_date,
+    )
     with sessionmaker(bind=engine)() as session:
         session.add(
             OutageNotification(
                 posted_at=config.now(),
-                type=OutageNotificationType.TOMORROW,
+                type=notification_type,
             )
         )
         session.commit()
-    logger.info("Tomorrow's outage schedule sent for %s", target_date)
+    logger.info("%s outage schedule sent for %s", notification_type.value, target_date)
     return True
 
 
@@ -151,9 +157,20 @@ async def main(stop_event=None) -> None:
             except Exception:
                 logger.exception("Outage schedule update failed")
             now = config.now()
-            if now.time() >= config.outage_schedule_send_time:
+            if now.time() >= config.outage_schedule_send_time_today:
                 try:
-                    await send_tomorrow_once()
+                    await send_schedule_once(
+                        OutageNotificationType.TODAY,
+                        now.date(),
+                    )
+                except Exception:
+                    logger.exception("Today's outage schedule send failed")
+            if now.time() >= config.outage_schedule_send_time_tomorrow:
+                try:
+                    await send_schedule_once(
+                        OutageNotificationType.TOMORROW,
+                        now.date() + dt.timedelta(days=1),
+                    )
                 except Exception:
                     logger.exception("Tomorrow's outage schedule send failed")
             logger.debug(
@@ -161,11 +178,19 @@ async def main(stop_event=None) -> None:
                 config.outage_update_interval_seconds,
             )
             now = config.now()
-            next_schedule = dt.datetime.combine(
-                now.date(), config.outage_schedule_send_time, tzinfo=now.tzinfo
+            next_schedules = [
+                dt.datetime.combine(
+                    now.date(), schedule_time, tzinfo=now.tzinfo
+                )
+                for schedule_time in (
+                    config.outage_schedule_send_time_today,
+                    config.outage_schedule_send_time_tomorrow,
+                )
+            ]
+            next_schedule = min(
+                schedule + (dt.timedelta(days=1) if schedule <= now else dt.timedelta())
+                for schedule in next_schedules
             )
-            if now >= next_schedule:
-                next_schedule += dt.timedelta(days=1)
             wait_seconds = min(
                 config.outage_update_interval_seconds,
                 max(1, int((next_schedule - now).total_seconds())),
