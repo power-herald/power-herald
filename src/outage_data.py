@@ -97,7 +97,6 @@ def prepare_messages(
         periods = _periods_for_day(schedule, weekday)
         messages[gpv["name"]] = {
             "name": gpv["name"],
-            "date": selected_date.isoformat(),
             "outages": [
                 {
                     "start": start,

@@ -134,6 +134,11 @@ def schedule_message(
 
 
 def schedule_message_from_json(
-    message: dict[str, Any], today: bool = True, as_of: datetime.datetime | None = None
+    message: dict[str, Any],
+    today: bool = True,
+    as_of: datetime.datetime | None = None,
+    *,
+    date: str | None = None,
 ) -> str:
-    return schedule_message(message["date"], message["outages"], message["name"], today=today, as_of=as_of)
+    message_date = date or message.get("date") or get_config().now().date().isoformat()
+    return schedule_message(message_date, message["outages"], message["name"], today=today, as_of=as_of)

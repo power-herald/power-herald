@@ -64,7 +64,7 @@ async def update_once() -> bool:
             outage_count,
             len(changed_messages),
         )
-    await send_messages(config.bot_token, changed_messages)
+    await send_messages(config.bot_token, changed_messages, date=config.now().date())
     logger.info("Outage schedule update completed")
     return True
 
@@ -90,7 +90,7 @@ async def send_tomorrow_once() -> bool:
             return False
         messages = list(prepare_messages(latest.json, config.gpvs, today=target_date).values())
 
-    await send_messages(config.bot_token, messages, today=False)
+    await send_messages(config.bot_token, messages, today=False, date=target_date)
     with sessionmaker(bind=engine)() as session:
         session.add(
             OutageNotification(
@@ -103,7 +103,9 @@ async def send_tomorrow_once() -> bool:
     return True
 
 
-async def send_messages(token: str, messages: list[dict], today: bool = True) -> None:
+async def send_messages(
+    token: str, messages: list[dict], today: bool = True, date: dt.date | None = None
+) -> None:
     if not messages:
         logger.info("No changed outage messages to send")
         return
@@ -115,7 +117,12 @@ async def send_messages(token: str, messages: list[dict], today: bool = True) ->
             chats = session.query(Chat).filter_by(enabled=True).all()
             logger.warning("Sending %s changed outage messages to %s enabled chats", len(messages), len(chats))
             for message in messages:
-                rendered_message = schedule_message_from_json(message, today=today, as_of=sent_at)
+                rendered_message = schedule_message_from_json(
+                    message,
+                    date=(date or config.now().date()).isoformat(),
+                    today=today,
+                    as_of=sent_at,
+                )
                 sent_count = 0
                 for chat in chats:
                     try:
