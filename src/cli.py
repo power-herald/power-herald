@@ -149,7 +149,7 @@ def serialize(record: Any) -> dict[str, Any]:
 
 def json_text(value: Any) -> str:
     encoding = (sys.stdout.encoding or "").lower().replace("-", "")
-    return json.dumps(value, default=str, ensure_ascii=encoding != "utf8")
+    return json.dumps(value, default=str, ensure_ascii=encoding != "utf8", indent=2)
 
 
 def output(records: list[Any], as_json: bool) -> None:
