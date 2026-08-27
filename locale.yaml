@@ -34,28 +34,28 @@ generator:
 
 notification:
   source:
-    online: "✅ Електропостачання відновлено для {source_name}" # {source_description}
-    offline: "❌ Електропостачання перервано для {source_name}" # {source_description}
+    online: "✅ Електропостачання відновлено для {source_name}\n" # {source_description}
+    offline: "❌ Електропостачання перервано для {source_name}\n" # {source_description}
     online_duration: "⏱ Світла не було {duration}"
     offline_duration: "⏱ Світло було {duration}"
   generator:
-    online: "⚠️ Запущено генератор ({source_name})"
-    offline: "⚠️ Генератор зупинено ({source_name})"
+    online: "⚠️ Запущено генератор ({source_name})\n"
+    offline: "⚠️ Генератор зупинено ({source_name})\n"
     offline_duration: "⏱ Працював: {duration}"
     maintenance_window: "⏱ Технічна перерва {start} - {end}"
     next_working_window: "⏱ Кінець технічної перерви {start}"
   group:
-    online: "✅ Електропостачання відновлено для {group_name}" # {group_description}
-    offline: "❌ Електропостачання перервано для {group_name}" # {group_description}
+    online: "✅ Електропостачання відновлено для {group_name}\n" # {group_description}
+    offline: "❌ Електропостачання перервано для {group_name}\n" # {group_description}
     online_source: "⏱ Для {source_name} раніше світла не було (невідомо скільки часу)"
     offline_source: "⏱ Для {source_name} раніше світло було (невідомо скільки часу)"
     source_online_duration: "⏱ Для {source_name} світла не було: {duration}"
     source_offline_duration: "⏱ Для {source_name} світло було: {duration}"
 
 schedule:
-  outages_today: "🗓 Графік відключень для {name} на сьогодні, {date}:"
-  outages_tomorrow: "🗓 Графік відключень для {name} на завтра, {date}:"
+  outages_today: "🗓 Графік відключень на сьогодні.\n{name}, {date}:\n"
+  outages_tomorrow: "🗓 Графік відключень на завтра.\n{name}, {date}:\n"
   outage_period_online: "🟢 {start} - {end}"
   outage_period_offline: "🔴 {start} - {end}"
-  no_outages_today: "🗓 Немає відключень для {name} на сьогодні, {date}."
-  no_outages_tomorrow: "🗓 Немає відключень для {name} на завтра, {date}."
+  no_outages_today: "🗓 Немає відключень на сьогодні.\n{name}, {date}."
+  no_outages_tomorrow: "🗓 Немає відключень на завтра.\n{name}, {date}."
