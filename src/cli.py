@@ -135,6 +135,15 @@ def serialize(record: Any) -> dict[str, Any]:
         elif hasattr(value, "name"):
             value = value.name.lower()
         result[column.name] = value
+    if isinstance(record, PowerSource):
+        passive = record.passive
+        generator = record.generator
+        result.update({
+            "address": None if passive is None else passive.address,
+            "ping_method": None if passive is None else passive.ping_method.name.lower(),
+            "work_duration_minutes": None if generator is None else generator.work_duration_minutes,
+            "maintenance_duration_minutes": None if generator is None else generator.maintenance_duration_minutes,
+        })
     return result
 
 
