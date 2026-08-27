@@ -140,5 +140,5 @@ def schedule_message_from_json(
     *,
     date: str | None = None,
 ) -> str:
-    message_date = date or message.get("date") or get_config().now().date().isoformat()
+    message_date = date or get_config().now().date().isoformat()
     return schedule_message(message_date, message["outages"], message["name"], today=today, as_of=as_of)

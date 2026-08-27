@@ -1,4 +1,6 @@
 # src/admin.py
+import logging
+
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
@@ -14,6 +16,45 @@ engine = create_engine(config.db_url)
 Session = sessionmaker(bind=engine)
 
 router = Router()
+logger = logging.getLogger("admin")
+
+
+def _log_command(message: types.Message, command: str) -> None:
+    user = message.from_user
+    chat = message.chat
+    logger.info(
+        "Command %s executed by user_id=%s username=%s first_name=%s last_name=%s "
+        "in chat_id=%s chat_type=%s chat_title=%s chat_username=%s thread_id=%s",
+        command,
+        user.id if user else None,
+        user.username if user else None,
+        user.first_name if user else None,
+        user.last_name if user else None,
+        chat.id,
+        chat.type,
+        chat.title,
+        chat.username,
+        message.message_thread_id,
+    )
+
+
+def _log_command_warning(message: types.Message, command: str, reason: str) -> None:
+    user = message.from_user
+    chat = message.chat
+    logger.warning(
+        "Command %s rejected or failed for user_id=%s username=%s first_name=%s "
+        "last_name=%s in chat_id=%s chat_type=%s chat_title=%s chat_username=%s: %s",
+        command,
+        user.id if user else None,
+        user.username if user else None,
+        user.first_name if user else None,
+        user.last_name if user else None,
+        chat.id,
+        chat.type,
+        chat.title,
+        chat.username,
+        reason,
+    )
 
 
 def chat_is_enabled(chat_id: int) -> bool:
@@ -38,13 +79,16 @@ def generator_keyboard() -> ReplyKeyboardMarkup:
 
 @router.message(Command("activate"))
 async def activate_cmd(message: types.Message):
+    _log_command(message, "/activate")
     if chat_is_enabled(message.chat.id) and message.chat.type == "private":
+        _log_command_warning(message, "/activate", "chat already activated")
         await message.answer(
             get_message("admin.error.chat_already_activated"),
             reply_markup=generator_keyboard(),
         )
         return
     if chat_is_enabled(message.chat.id) and message.chat.type != "private":
+        _log_command_warning(message, "/activate", "chat already activated")
         await message.answer(get_message("admin.error.chat_already_activated"))
         return
     session = Session()
@@ -74,12 +118,15 @@ async def activate_cmd(message: types.Message):
 
 @router.message(Command("approve"))
 async def approve_cmd(message: types.Message):
+    _log_command(message, "/approve")
     if str(message.chat.id) not in config.admin_chat_ids:
+        _log_command_warning(message, "/approve", "not authorized")
         response_message = get_message("admin.error.not_authorized")
         await message.answer(response_message)
         return
     args = message.text.split()
     if len(args) < 2:
+        _log_command_warning(message, "/approve", "missing chat ID")
         response_message = get_message("bot.usage.approve")
         await message.answer(response_message)
         return
@@ -99,6 +146,7 @@ async def approve_cmd(message: types.Message):
             reply_markup=generator_keyboard() if chat.is_private else None,
         )
     else:
+        _log_command_warning(message, "/approve", "chat not found")
         response_message = get_message("admin.error.chat_not_found")
         await message.answer(response_message)
     session.close()
@@ -106,11 +154,14 @@ async def approve_cmd(message: types.Message):
 
 @router.message(Command("subscribe"))
 async def subscribe_cmd(message: types.Message):
+    _log_command(message, "/subscribe")
     if str(message.chat.id) not in config.admin_chat_ids:
+        _log_command_warning(message, "/subscribe", "not authorized")
         await message.answer(get_message("admin.error.not_authorized"))
         return
     args = message.text.split()
     if len(args) < 3:
+        _log_command_warning(message, "/subscribe", "missing chat ID or source ID")
         await message.answer(get_message("bot.usage.subscribe"))
         return
 
@@ -118,6 +169,7 @@ async def subscribe_cmd(message: types.Message):
     try:
         source_id = int(source_id_text)
     except ValueError:
+        _log_command_warning(message, "/subscribe", "invalid source ID")
         await message.answer(get_message("admin.error.source_not_found"))
         return
 
@@ -125,8 +177,10 @@ async def subscribe_cmd(message: types.Message):
     chat = session.query(Chat).filter_by(id=chat_id).first()
     source = session.query(PowerSource).filter_by(id=source_id, enabled=True).first()
     if not chat:
+        _log_command_warning(message, "/subscribe", "chat not found")
         await message.answer(get_message("admin.error.chat_not_found"))
     elif not source:
+        _log_command_warning(message, "/subscribe", "source not found or disabled")
         await message.answer(get_message("admin.error.source_not_found"))
     else:
         subscription = session.query(Subscription).filter_by(
@@ -145,13 +199,16 @@ async def subscribe_cmd(message: types.Message):
 
 @router.message(Command("sources"))
 async def sources_cmd(message: types.Message):
+    _log_command(message, "/sources")
     if str(message.chat.id) not in config.admin_chat_ids:
+        _log_command_warning(message, "/sources", "not authorized")
         await message.answer(get_message("admin.error.not_authorized"))
         return
     session = Session()
     sources = session.query(PowerSource).order_by(PowerSource.id).all()
     session.close()
     if not sources:
+        _log_command_warning(message, "/sources", "no sources found")
         await message.answer(get_message("admin.error.no_sources"))
         return
     lines = [
@@ -169,13 +226,16 @@ async def sources_cmd(message: types.Message):
 
 @router.message(Command("chats"))
 async def chats_cmd(message: types.Message):
+    _log_command(message, "/chats")
     if str(message.chat.id) not in config.admin_chat_ids:
+        _log_command_warning(message, "/chats", "not authorized")
         await message.answer(get_message("admin.error.not_authorized"))
         return
     session = Session()
     chats = session.query(Chat).order_by(Chat.id).all()
     session.close()
     if not chats:
+        _log_command_warning(message, "/chats", "no chats found")
         await message.answer(get_message("admin.error.no_chats"))
         return
     lines = [
@@ -191,17 +251,25 @@ async def chats_cmd(message: types.Message):
 
 @router.message(Command("maintenance"))
 async def maintenance_cmd(message: types.Message):
+    _log_command(message, "/maintenance")
     if str(message.chat.id) not in config.admin_chat_ids:
+        _log_command_warning(message, "/maintenance", "not authorized")
         response_message = get_message("admin.error.not_authorized")
         await message.answer(response_message)
         return
     # Example: /maintenance <source_id> <on|off> [comment]
     args = message.text.split()
     if len(args) < 3:
+        _log_command_warning(message, "/maintenance", "missing source ID or state")
         response_message = get_message("bot.usage.maintenance")
         await message.answer(response_message)
         return
-    source_id = None if args[1] == "global" else int(args[1])
+    try:
+        source_id = None if args[1] == "global" else int(args[1])
+    except ValueError:
+        _log_command_warning(message, "/maintenance", "invalid source ID")
+        await message.answer(get_message("bot.usage.maintenance"))
+        return
     enabled = args[2] == "on"
     comment = " ".join(args[3:]) if len(args) > 3 else None
     from src.maintenance import set_maintenance
@@ -215,10 +283,13 @@ async def maintenance_cmd(message: types.Message):
 
 @router.message(Command("generator"))
 async def generator_cmd(message: types.Message):
+    _log_command(message, "/generator")
     if not chat_is_enabled(message.chat.id):
+        _log_command_warning(message, "/generator", "not authorized")
         await message.answer(get_message("admin.error.not_authorized"))
         return
     if message.chat.type != "private":
+        _log_command_warning(message, "/generator", "generator is private-chat only")
         await message.answer(get_message("admin.error.generator_private_only"))
         return
     session = Session()
@@ -227,6 +298,7 @@ async def generator_cmd(message: types.Message):
     ).first()
     session.close()
     if not source:
+        _log_command_warning(message, "/generator", "generator source not found or disabled")
         await message.answer(get_message("admin.error.generator_not_found"))
         return
     await message.answer(
@@ -236,6 +308,7 @@ async def generator_cmd(message: types.Message):
 
 
 async def _generator_state_cmd(message: types.Message, state: StateChangeType):
+    command = "/generator start" if state == StateChangeType.ONLINE else "/generator stop"
     session = Session()
     chat = session.query(Chat).filter_by(chat_id=str(message.chat.id), enabled=True).first()
     source = session.query(PowerSource).filter_by(
@@ -243,6 +316,7 @@ async def _generator_state_cmd(message: types.Message, state: StateChangeType):
     ).first()
     session.close()
     if (not chat or not source) and not chat_is_admin(message.chat.id):
+        _log_command_warning(message, command, "not authorized or generator source unavailable")
         response_message = get_message("admin.error.not_authorized") if not chat else get_message("admin.error.generator_not_found")
         await message.answer(response_message)
         return
@@ -254,9 +328,11 @@ async def _generator_state_cmd(message: types.Message, state: StateChangeType):
 
 @router.message(F.text == get_message("generator.start_button"))
 async def start_generator_cmd(message: types.Message):
+    _log_command(message, "/generator start")
     await _generator_state_cmd(message, StateChangeType.ONLINE)
 
 
 @router.message(F.text == get_message("generator.stop_button"))
 async def stop_generator_cmd(message: types.Message):
+    _log_command(message, "/generator stop")
     await _generator_state_cmd(message, StateChangeType.OFFLINE)
