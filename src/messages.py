@@ -111,8 +111,10 @@ def schedule_message(
     name: str,
     today: bool = True,
     as_of: datetime.datetime | None = None,
+    updated: bool = False,
 ) -> str:
-    title_key = "schedule.outages_today" if today else "schedule.outages_tomorrow"
+    title_key = "schedule.outages_today_updated" if today and updated else None
+    title_key = title_key or ("schedule.outages_today" if today else "schedule.outages_tomorrow")
     empty_key = "schedule.no_outages_today" if today else "schedule.no_outages_tomorrow"
     as_of = as_of or get_config().now()
     if not outages:
@@ -137,8 +139,9 @@ def schedule_message_from_json(
     message: dict[str, Any],
     today: bool = True,
     as_of: datetime.datetime | None = None,
+    updated: bool = False,
     *,
     date: str | None = None,
 ) -> str:
     message_date = date or get_config().now().date().isoformat()
-    return schedule_message(message_date, message["outages"], message["name"], today=today, as_of=as_of)
+    return schedule_message(message_date, message["outages"], message["name"], today=today, as_of=as_of, updated=updated)

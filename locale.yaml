@@ -55,6 +55,7 @@ notification:
 schedule:
   outages_today: "🗓 Графік відключень на сьогодні.\n{name}, {date}:\n"
   outages_tomorrow: "🗓 Графік відключень на завтра.\n{name}, {date}:\n"
+  outages_today_updated: "🗓 Оновлений графік відключень на сьогодні.\n{name}, {date}:\n"
   outage_period_online: "🟢 {start} - {end}"
   outage_period_offline: "🔴 {start} - {end}"
   no_outages_today: "🗓 Немає відключень на сьогодні.\n{name}, {date}."

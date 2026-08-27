@@ -64,7 +64,7 @@ async def update_once() -> bool:
             outage_count,
             len(changed_messages),
         )
-    await send_messages(config.bot_token, changed_messages, date=config.now().date())
+    await send_messages(config.bot_token, changed_messages, date=config.now().date(), updated=True)
     logger.info("Outage schedule update completed")
     return True
 
@@ -110,7 +110,10 @@ async def send_schedule_once(
 
 
 async def send_messages(
-    token: str, messages: list[dict], today: bool = True, date: dt.date | None = None
+    token: str, messages: list[dict],
+    today: bool = True,
+    date: dt.date | None = None,
+    updated: bool = False,
 ) -> None:
     if not messages:
         logger.info("No changed outage messages to send")
@@ -128,6 +131,7 @@ async def send_messages(
                     date=(date or config.now().date()).isoformat(),
                     today=today,
                     as_of=sent_at,
+                    updated=updated,
                 )
                 sent_count = 0
                 for chat in chats:
