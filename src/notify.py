@@ -59,7 +59,7 @@ async def notify_state_change(source_id: int, state: StateChangeType, timestamp:
                     source.name, source.description, state.value, duration, maintenance_window, next_working_window
                 )
             await bot.send_message(chat.chat_id, msg, message_thread_id=chat.thread_id)
-            logger.info("Notified %s: %s", chat.title or chat.chat_id, msg.replace("\n", " "))
+            logger.warning("Notified %s: %s", chat.title or chat.chat_id, msg.replace("\n", " "))
     finally:
         session.close()
 
@@ -96,7 +96,7 @@ async def notify_group_state_change(
         message = group_state_change_message(group.name, group.description, state.value, durations)
         for chat in chats.values():
             await bot.send_message(chat.chat_id, message, message_thread_id=chat.thread_id)
-            logger.info("Notified %s: %s", chat.title or chat.chat_id, message)
+            logger.warning("Notified %s: %s", chat.title or chat.chat_id, message)
     finally:
         session.close()
 

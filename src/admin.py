@@ -214,7 +214,7 @@ async def maintenance_cmd(message: types.Message):
     await message.answer(response_message)
 
 @router.message(Command("generator"))
-async def activate_cmd(message: types.Message):
+async def generator_cmd(message: types.Message):
     if not chat_is_enabled(message.chat.id):
         await message.answer(get_message("admin.error.not_authorized"))
         return

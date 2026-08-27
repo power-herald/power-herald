@@ -54,7 +54,7 @@ async def probe_source(session, source):
         logger.warning("Passive source %s has no passive configuration", source.name)
         return
     if is_maintenance(source.id)[0]:
-        logger.info("Maintenance mode enabled for %s, skipping probe.", source.name)
+        logger.debug("Maintenance mode enabled for %s, skipping probe.", source.name)
         return
     states = []
     for _ in range(config.passive_probe_count):
@@ -67,7 +67,7 @@ async def probe_source(session, source):
     timestamp = get_config().now()
     if len(states) > 1 and states[0] == states[-1]:
         record_state(session, source.id, states[-1], timestamp)
-        logger.info("Source %s is %s", source.name, states[-1].value)
+        logger.debug("Source %s is %s", source.name, states[-1].value)
 
 
 async def probe_passive_sources():

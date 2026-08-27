@@ -44,10 +44,10 @@ def current_state(session, source, timestamp):
 def process_group(session, group, timestamp):
     changed = []
     for source in [source for source in group.sources if source.enabled]:
-        logger.info("Processing state change for source: %s", source.name)
+        logger.debug("Processing state change for source: %s", source.name)
         state = current_state(session, source, timestamp)
         previous = latest_change(session, source.id, stable_only=True)
-        logger.info(
+        logger.debug(
             "Current state for %s: %s, previous state: %s",
             source.name, state.value, previous.state.value if previous else "None"
         )
@@ -66,7 +66,7 @@ async def process_sources():
         grouped_ids = set()
         notifications = []
         for group in groups:
-            logger.info("Processing state change for group: %s", group.name)
+            logger.debug("Processing state change for group: %s", group.name)
             enabled_sources = [source for source in group.sources if source.enabled]
             grouped_ids.update(source.id for source in enabled_sources)
             changed = process_group(session, group, timestamp)
@@ -76,10 +76,10 @@ async def process_sources():
         if grouped_ids:
             source_query = source_query.filter(~PowerSource.id.in_(grouped_ids))
         for source in source_query.all():
-            logger.info("Processing state change for source: %s", source.name)
+            logger.debug("Processing state change for source: %s", source.name)
             state = current_state(session, source, timestamp)
             previous = latest_change(session, source.id, stable_only=True)
-            logger.info(
+            logger.debug(
                 "Current state for %s: %s, previous state: %s",
                 source.name, state.value, previous.state.value if previous else "None"
             )

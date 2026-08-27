@@ -113,7 +113,7 @@ async def send_messages(token: str, messages: list[dict], today: bool = True) ->
         sent_at = config.now()
         with sessionmaker(bind=engine)() as session:
             chats = session.query(Chat).filter_by(enabled=True).all()
-            logger.info("Sending %s changed outage messages to %s enabled chats", len(messages), len(chats))
+            logger.warning("Sending %s changed outage messages to %s enabled chats", len(messages), len(chats))
             for message in messages:
                 rendered_message = schedule_message_from_json(message, today=today, as_of=sent_at)
                 sent_count = 0
@@ -128,7 +128,7 @@ async def send_messages(token: str, messages: list[dict], today: bool = True) ->
                         sent_count += 1
                     except Exception:
                         logger.exception("Failed to send outage message to %s", chat.chat_id)
-                logger.info("Sent outage message for %s to %s chats", message["name"], sent_count)
+                logger.warning("Sent outage message for %s to %s chats", message["name"], sent_count)
     finally:
         await bot.session.close()
 

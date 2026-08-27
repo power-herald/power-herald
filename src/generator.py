@@ -33,7 +33,7 @@ async def set_generator_state(source_id: int, state: StateChangeType) -> bool:
         if changed:
             record_change(session, source.id, state, timestamp)
         session.commit()
-        logger.info("Generator %s state changed to %s", source.name, state.value)
+        logger.warning("Generator %s state changed to %s", source.name, state.value)
         session.close()
         await notify_state_change(source.id, state, timestamp)
         return True

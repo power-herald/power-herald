@@ -45,11 +45,11 @@ async def handle_active_ping(request):
         from src.maintenance import is_maintenance
         maintenance, _ = is_maintenance(source.id if source else None)
         if maintenance:
-            logger.warning("Active ping rejected for %s: maintenance mode enabled", source_name)
+            logger.debug("Active ping rejected for %s: maintenance mode enabled", source_name)
             return web.json_response({"error": "Maintenance mode enabled"}, status=403)
         if not source:
-            logger.warning("Active ping rejected: active source not found or disabled: %s", source_name)
-            return web.json_response({"error": "Source not found or not active"}, status=404)
+            logger.debug("Active ping rejected: source not found or disabled: %s", source_name)
+            return web.json_response({"error": "Source not found or disabled"}, status=404)
         try:
             state_enum = StateChangeType(state)
         except Exception:
@@ -58,7 +58,7 @@ async def handle_active_ping(request):
         timestamp = config.now()
         record_state(session, source.id, state_enum, timestamp)
         session.commit()
-        logger.info("Source %s is %s", source.name, state_enum.value)
+        logger.debug("Source %s is %s", source.name, state_enum.value)
         return web.json_response({"status": "ok"})
 
 def create_app():
