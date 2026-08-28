@@ -10,13 +10,15 @@ timezone: "Europe/Kyiv"
 locale_file: "./locale.yaml"
 
 database:
-  driver: "sqlite" # or "mysql+pymysql"
-  database: "./power_herald.db"
-  host: "localhost"
-  port: 3306
-  user: "power_herald"
-  password: "power_herald"
-  database: "power_herald"
+  driver: "mysql+pymysql" # or "sqlite"
+  sqlite:
+    file_path: "./power_herald.db"
+  mariadb:
+    host: "localhost"
+    port: 3306
+    user: "power_herald"
+    password: "power_herald"
+    database: "power_herald"
 
 admin:
   chat_ids: ["YOUR_ADMIN_CHAT_ID_1", "YOUR_ADMIN_CHAT_ID_2"]

@@ -71,17 +71,26 @@ class Config:
         return {}
 
     @property
+    def db_file_path(self) -> str | None:
+        if self.db_driver == "sqlite":
+            file_path = self.get("database.sqlite.file_path", "./power_herald.db")
+            if not isinstance(file_path, str) or not file_path:
+                raise ValueError("database.sqlite.file_path must be a non-empty SQLite database path")
+            if os.path.isabs(file_path):
+                return file_path
+            return os.path.join(os.path.dirname(os.path.abspath(self.config_path)), file_path)
+        return None
+
+    @property
     def db_url(self) -> str:
         db = self.get("database", {})
-        if self.db_driver == "sqlite":
-            database = db.get("database", "./power_herald.db")
-            if not isinstance(database, str) or not database:
-                raise ValueError("database.database must be a non-empty SQLite database path")
-            return f"sqlite:///{database}"
+        if self.db_driver == "sqlite" and self.db_file_path:
+            return f"sqlite:///{self.db_file_path}"
 
+        mariadb = db.get("mariadb", {})
         return (
-            f"{self.db_driver}://{db['user']}:{db['password']}"
-            f"@{db['host']}:{db['port']}/{db['database']}"
+            f"{self.db_driver}://{mariadb['user']}:{mariadb['password']}"
+            f"@{mariadb['host']}:{mariadb['port']}/{mariadb['database']}"
         )
 
     @property

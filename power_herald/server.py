@@ -2,14 +2,34 @@
 
 import asyncio
 import logging
+import os
+
+from sqlalchemy import create_engine
 
 from power_herald import active_probe, bot, processor, probe, schedule
+from power_herald.config import get_config
 from power_herald.lifecycle import create_stop_event
+from power_herald.models import Base
 
 logger = logging.getLogger("server")
 
 
+def init_database() -> None:
+    """Create missing tables so a fresh database is usable without running ph-cli first."""
+    config = get_config()
+    if config.db_driver == "sqlite" and config.db_file_path:
+        if os.path.exists(config.db_file_path):
+            logger.info("SQLite database file already exists, skipping table creation")
+            return
+        logger.warning("SQLite database file does not exist, creating tables")
+        engine = create_engine(config.db_url, **config.db_engine_options)
+        Base.metadata.create_all(engine)
+        engine.dispose()
+        return
+
+
 async def main() -> None:
+    init_database()
     stop_event = create_stop_event()
     services = [
         asyncio.create_task(bot.main(stop_event), name="bot"),
