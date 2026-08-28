@@ -41,8 +41,8 @@ outages:
   json_file: "./assets/kyiv-test.json"
   delay_seconds: 1800
   schedule_send_time:
-    today: "06:00"
-    tomorrow: "21:00"
+    today: "06:00" # Empty string, false, or comment out to disable sending today's outages notification
+    tomorrow: "21:00" # Empty string, false, or comment out to disable sending tomorrow's outage notification
   gpvs:
     - name: "Kyiv GPV 37.1"
       id: "GPV37.1"

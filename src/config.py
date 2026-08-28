@@ -152,8 +152,10 @@ class Config:
         return value
 
     @property
-    def outage_schedule_send_time_tomorrow(self) -> dt.time:
-        value = self.get("outages.schedule_send_time.tomorrow", "21:00")
+    def outage_schedule_send_time_tomorrow(self) -> dt.time | None:
+        value = self.get("outages.schedule_send_time.tomorrow")
+        if (isinstance(value, str) and value == "" ) or (isinstance(value, bool) and not value):
+            return None
         if not isinstance(value, str):
             raise ValueError("outages.schedule_send_time.tomorrow must be in HH:MM format")
         try:
@@ -162,8 +164,10 @@ class Config:
             raise ValueError("outages.schedule_send_time.tomorrow must be in HH:MM format") from error
 
     @property
-    def outage_schedule_send_time_today(self) -> dt.time:
-        value = self.get("outages.schedule_send_time.today", "06:00")
+    def outage_schedule_send_time_today(self) -> dt.time | None:
+        value = self.get("outages.schedule_send_time.today")
+        if (isinstance(value, str) and value == "" ) or (isinstance(value, bool) and not value):
+            return None
         if not isinstance(value, str):
             raise ValueError("outages.schedule_send_time.today must be in HH:MM format")
         try:

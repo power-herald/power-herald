@@ -1,6 +1,6 @@
 # Power Herald Bot
 
-A Python-based Telegram bot for notifying subscribers about power outages, generator events, and scheduled maintenance windows. Supports multiple chats, admin-controlled activation, and flexible power source management.
+A Python-based Telegram bot for notifying subscribers about power outages, generator events with maintenance windows, outages schedule, etc. Supports multiple chats, admin-controlled activation, and flexible power source management.
 
 User-facing messages are configured in `locale.yaml`. Message templates use
 Python format placeholders such as `{chat_id}` and `{source_name}`; keep the
@@ -8,13 +8,13 @@ placeholder names intact when customizing a message.
 
 ## Features
 
-- **Multi-source monitoring**: Support for passive probing (bot pings device), active probing (device pings bot), and manual generator control
-- **Grouped notifications**: Group passive sources into one named, described group; when every enabled source changes to the same state, one message includes per-source outage durations, otherwise only changed sources are notified
+- **Multi-source monitoring**: Support for passive probing (bot pings device), active probing (device pings bot), and manual notifications.
+- **Grouped notifications**: Group power sources into one named, described group; when every enabled source changes to the same state, one message includes per-source outage durations, otherwise only changed sources are notified
 - **Smart notifications**: Includes state changes, outage durations, and generator maintenance schedules
 - **Per-chat subscriptions**: Different buildings/groups can subscribe to specific power sources
 - **Admin controls**: Manual activation approval, maintenance mode management, generator event configuration
-- **Scheduled outages**: Daily posting of outage schedules (integration-ready for Yasno DTEK)
-- **Database persistence**: ORM-based MySQL storage of state changes, outages, and subscriptions
+- **Scheduled outages**: Daily posting of outage schedules (third-party source, aggregated from Yasno/DTEK)
+- **Database persistence**: ORM-based MariaSQL storage of state changes, outages, and subscriptions
 - **OpenRC integration**: Systemd-free daemon management for Gentoo Linux
 - **Webhook-based**: No long polling; efficient webhook integration with Telegram
 
@@ -24,28 +24,36 @@ placeholder names intact when customizing a message.
 ├── src/
 │   ├── models.py           # ORM models (PowerSource, Chat, Subscription, etc.)
 │   ├── config.py           # Configuration loader (YAML)
-│   ├── bot.py              # Telegram webhook bot & main entry point
+│   ├── bot.py              # Telegram webhook bot & it's main entry point
 │   ├── admin.py            # Admin commands (activation, maintenance, generator)
 │   ├── probe.py            # Passive probing daemon (bot pings devices)
 │   ├── processor.py        # State processor and notification daemon
 │   ├── active_probe.py     # Active probe HTTP endpoint (devices ping bot)
 │   ├── generator.py        # Generator state control used by the bot
 │   ├── notify.py           # Notification logic (state changes + maintenance windows)
+│   ├── outage_data.py      # Third-party source of outage schedule retrieving and parsing
 │   ├── outage_periods.py   # Outage period tracking & duration calculation
 │   ├── maintenance.py      # Maintenance mode management
-│   └── schedule.py         # Scheduled outage integration
+│   └── schedule.py         # Outage schedule notifications (from-today-for-today, from-today-for-tomorrow)
+│   ├── cli.py              # Console management client application for database entities
+│   ├── server.cli          # All-in-one daemon to run separated modules
+│   ├── lifecycle.py        # Daemon utils
+│   ├── messages.py         # User messages interpolation and preparation
+│   ├── state_store.py      # Power source state changes recording routines
 ├── init.d/                 # OpenRC init script for the combined daemon
 ├── config.yaml             # Configuration file (secrets & settings)
 ├── locale.yaml             # Localization for user messages
 └── README.md               # This file
 ```
 
+---
+
 ## Installation
 
 ### Prerequisites
 
 - Python 3.12+
-- MySQL 5.7+ (or compatible)
+- MariaDB 10.2 or MySQL 5.7+ (or compatible)
 - Gentoo Linux with OpenRC (for daemon management)
 - Telegram bot token (from @BotFather)
 - Domain with SSL certificate (for webhooks)
@@ -107,15 +115,17 @@ sudo rc-update add power-herald default
 # Start services...
 ```
 
+---
+
 ## Configuration
 
-Edit `config.yaml` to customize:
+Edit `config.yaml` to change the needed minimum that must be defined:
 
 ```yaml
 telegram:
   token: "YOUR_BOT_TOKEN"
   webhook_url: "https://your.domain/webhook"
-  webhook_port: 8080
+  webhook_secret: "YOUR_WEBHOOK_SECRET"
 
 database:
   host: "localhost"
@@ -126,26 +136,16 @@ database:
 admin:
   chat_ids: ["123456789", "987654321"]
 
-probing:
-  passive:
-    interval_seconds: 30
-    timeout_seconds: 5
-  active:
-    port: 8081
-
 outages:
-  source: "url" # "url" or "file"
-  json_url: "https://raw.githubusercontent.com/Baskerville42/outage-data-ua/main/data/outages.json"
-  json_file: "/path/to/outages.json"
-  delay_seconds: 1800
   gpvs:
     - name: "Kyiv GPV 37.1"
       id: "GPV37.1"
 
-timezone: "Europe/Kyiv" # IANA timezone used for application timestamps and schedules
 ```
 
 See `config.yaml` for all available options.
+
+---
 
 ## Usage
 
@@ -159,28 +159,28 @@ See `config.yaml` for all available options.
 ### Power Source Types
 
 #### 1. Passive (Bot pings device)
-- Bot periodically checks the device using the source's `ping_method`: `HTTP`, `PING3`, or `TCP`
-- Use `HTTP` with a URL, `PING3` with a hostname/IP, or `TCP` with a `host:port` address
+- Bot periodically checks the device using the source's `ping_method`: `HTTP`, `PING`, or `TCP`
+- Use `HTTP` with a URL, `PING` with a hostname/IP, or `TCP` with a `host:port` address
 - State: ONLINE/OFFLINE
-- Use case: Grid power lines, always-on devices
+- Use case: Devices, those are reachable from the Internet 
 
 #### 2. Active (Device pings bot)
-- Device sends HTTP POST to `/active_ping` endpoint
+- Device sends HTTP POST to `/ping` endpoint
 - Payload: `{"name": "source_name", "state": "online|offline"}`
-- Use case: Devices with limited battery, smart controllers
+- Use case: Smart devices, controllers, etc.
 
-#### 3. Generator (Manual control with maintenance)
+#### 3. Manual control (By user via chat)
 - Manual start/stop via the localized buttons shown after chat activation
 - Auto-generates maintenance windows:
-  - Start: shows maintenance window (default +4 hours)
-  - Stop: shows next working window (default +1 hour)
+  - Start: shows maintenance window (default is +4 hours from now)
+  - Stop: shows next working window (default is +1 hour from now)
 - Use case: Backup generators with scheduled maintenance
 
 ### HTTP Endpoints
 
 **Active Probe** (port 8081):
 ```bash
-POST /active_ping
+POST /ping
 {
   "name": "source_name",
   "state": "online|offline"
@@ -196,20 +196,20 @@ POST /active_ping
 ```bash
 sudo rc-service power-herald start
 sudo rc-service power-herald stop
-
-# Restart all
 sudo rc-service power-herald restart
 
 # Check status
 sudo rc-service power-herald status
 
 # View logs
-sudo tail -f /var/log/power-herald/bot.log
+sudo tail -f /var/log/power-herald/server.log
 ```
 
 For debugging, the individual workers remain available as standalone module
 entry points, for example `venv/bin/python -m src.bot` or
 `venv/bin/python -m src.processor`.
+
+---
 
 ## Database Schema
 
@@ -239,7 +239,9 @@ entry points, for example `venv/bin/python -m src.bot` or
 - Building A subscribed to: Line A, Line B, Generator 1
 - Building B subscribed to: Line C, Generator 2
 - Each receives relevant notifications independently
-- Each activated chat receives generator notifications through its own subscription
+- Each activated chat receives own generator notifications through its own subscription
+
+---
 
 ## Troubleshooting
 
@@ -247,6 +249,9 @@ entry points, for example `venv/bin/python -m src.bot` or
 - Check webhook URL is accessible
 - Verify bot token in config.yaml
 - Check Telegram bot @BotFather settings
+
+## Regular ping is not working
+- Check (PING3 Troubleshooting)[ping3-ts], especially on Debian-based systems
 
 ### No state changes recorded
 - Verify passive probe interval (default 30s)
@@ -259,22 +264,31 @@ entry points, for example `venv/bin/python -m src.bot` or
 - Review bot token permissions
 
 ### Generator maintenance windows not showing
-- Verify generator source type is "GENERATOR"
+- Verify generator source type is "MANUAL", it is marked as generator, and it is linked to the chat
 - Check work_duration_minutes and maintenance_duration_minutes in database
+
+---
 
 ## Future Enhancements
 
-- Direct Yasno DTEK API integration (when available)
-- Web dashboard for status monitoring
-- Telegram inline keyboards for quick actions
-- Multiple generator groups/schedules
-- Historical stats and analytics
-- SMS/email fallback notifications
+- [] Web dashboard for status monitoring
+- [] Telegram inline keyboards for quick actions
+- [] Historical stats and analytics notifications
+- [] Other messangers integration
+- [] Email fallback notifications
+- [] Docker image
+- [] Systemd integration
+- [] Debian-based package distribution (`*.deb`) 
 
 ## License
 
-TBD
+MIT License at [LICENSE]
 
 ## Support
 
-For issues or questions, contact the administrator.
+For questions, contact the administrator.
+
+For issues use issue tracker.
+
+---
+[ping3-ts]: https://github.com/kyan001/ping3/blob/master/TROUBLESHOOTING.md

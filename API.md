@@ -14,7 +14,7 @@ Receives Telegram updates. Automatically configured on bot startup.
 
 **Port**: 8081 (configurable)  
 **Method**: POST  
-**Path**: `/active_ping`
+**Path**: `/ping`
 
 Devices send their power state to this endpoint. Used for active monitoring where the device initiates the check.
 
@@ -43,16 +43,14 @@ Devices send their power state to this endpoint. Used for active monitoring wher
 ## Generator Control
 
 Generator state is controlled from the localized `Start Generator` and `Stop Generator`
-buttons shown to activated chats. The old HTTP endpoint and `/generator` command are
-no longer available. Each transition notifies subscribed, enabled chats and records
+buttons shown to activated chats. Each transition notifies subscribed, enabled chats and records
 the generator maintenance window.
-
 
 ---
 
 ## Telegram Bot Commands
 
-All commands are available only to authorized admin chats (configured in `config.yaml`).
+All admin commands are available only to authorized admin chats (configured in `config.yaml`).
 
 ### `/activate`
 Requests chat activation for a manual generator source. Sends activation request to admin chats for manual approval.
@@ -124,36 +122,47 @@ Toggle maintenance mode for a source or globally. When enabled, probes and notif
 
 ---
 
----
-
 ## Notification Messages
 
-### Standard State Change
+### Standard State Change for Source
 ```
-Line A: ONLINE
-Previous period: 2:15:30
+✅ Електропостачання відновлено для Ввід 1
+
+⏱ Світла не було 0:01:20
+```
+
+### Standard State Change for Group
+```
+✅ Електропостачання відновлено для ЖК
+
+⏱ Для Ввід 1 світла не було: 0:01:20
+⏱ Для Ввід 2 світла не було: 0:02:20
 ```
 
 ### Generator Start (with Maintenance Window)
 ```
-Generator 1: ONLINE
-Maintenance window: 14:00 - 15:00
+⚠️ Запущено генератор (Генератор 1)
+
+⏱ Технічна перерва: 14:00 - 15:00
 ```
 
 ### Generator Stop (with Next Working Window)
 ```
-Generator 1: OFFLINE
-Next working window: 19:00 onwards
+⚠️ Генератор зупинено (Генератор 1)
+
+⏱ Кінець технічної перерви: 19:10
 ```
 
-### Scheduled Outages (Daily)
+### Scheduled Outages Update
 ```
-Outages for 2026-08-24:
-  09:00 - 11:00
-  14:00 - 16:30
+🗓 Оновлений графік відключень на сьогодні.
+ЖК, група 37.1, 2026-08-24:
 
-Outages for 2026-08-25:
-No outages scheduled.
+~🟢 00:00 - 05:00~
+~🔴 05:00 - 09:30~
+~🟢 09:30 - 16:00~
+🔴 16:00 - 18:30
+🟢 18:30 - 24:00
 ```
 
 ---
@@ -182,6 +191,6 @@ No outages scheduled.
 
 - Bot webhook: Secured by Telegram's callback validation
 - Admin commands: Chat ID whitelist in `config.yaml`
-- HTTP endpoints: Open (recommended behind firewall or reverse proxy with auth)
+- HTTP endpoints: Open (recommended behind firewall or reverse proxy without auth)
 
-**Recommendation**: Deploy behind nginx/Apache with basic auth or IP whitelisting for HTTP endpoints.
+**Recommendation**: Deploy behind nginx/Apache without authentication or IP whitelisting for HTTP endpoints.
