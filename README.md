@@ -96,6 +96,53 @@ cp config.yaml.example config.yaml
 # assets/schema.sql is only for MariaDB/MySQL deployments.
 ```
 
+### Docker
+
+Build the image with Python 3.14 slim:
+
+```bash
+docker build --tag power-herald:latest .
+```
+
+Provide `config.yaml` at runtime so secrets are not included in the image. The
+container creates its SQLite tables on startup. To configure database entities,
+mount shell scripts into `/docker-init.d`; they run in filename order and can
+make sequential `ph-cli` calls. For example, create `docker-init.d/10-sources.sh`:
+
+```sh
+if [ ! -e /app/power_herald.db ]; then
+  ph-cli db restore
+  ph-cli groups add --name "Main buildings" --description "Primary sites"
+  ph-cli sources add --name grid-a --type passive --address 192.0.2.10 --ping-method ping
+  ph-cli group-sources add --group-id 1 --source-id 1
+fi
+```
+
+This guard uses the default SQLite path. Update `/app/power_herald.db` when
+`database.database` in `config.yaml` uses a different path.
+
+Mount that directory when starting the container:
+
+```bash
+docker run --detach --name power-herald \
+  --restart unless-stopped \
+  --publish 8080:8080 --publish 8081:8081 \
+  --volume "$(pwd)/config.yaml:/app/config.yaml:ro" \
+  --volume "$(pwd)/docker-init.d:/docker-init.d:ro" \
+  power-herald:latest
+```
+
+The administrator chat ID is not known before the first startup. Start the
+container, send the bot a message from the intended administrator chat, and
+retrieve that chat's ID from the container logs. Add the ID to
+`admin.chat_ids` in the mounted `config.yaml`, then restart the container.
+
+Initialization scripts execute each time the container starts, so make them
+idempotent or remove the initialization mount after the first successful
+startup. SQLite state is intentionally ephemeral; mount a writable data volume
+and configure `database.database` with its path only when state must persist.
+Set `POWER_HERALD_CONFIG` when mounting the configuration at a different path.
+
 ### Database CLI
 
 `ph-cli` provides database administration without opening a Python shell. Use
