@@ -3,7 +3,7 @@
 import asyncio
 import logging
 
-from src import active_probe, bot, processor, probe, schedule
+from power_herald import active_probe, bot, processor, probe, schedule
 from power_herald.lifecycle import create_stop_event
 
 logger = logging.getLogger("server")
