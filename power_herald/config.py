@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 load_dotenv()
 
-DEFAULT_CONFIG_PATH = os.environ.get("POWER_HERALD_CONFIG", "/etc/power-herald/config.yaml")
+DEFAULT_CONFIG_PATH = os.environ.get("POWER_HERALD_CONFIG", "./config.yaml")
 
 class Config:
     def __init__(self, config_path: str | None = None):
@@ -77,8 +77,10 @@ class Config:
 
     @property
     def locale_file(self) -> str:
-        default = os.path.join(os.path.dirname(self.config_path) or ".", "locale.yaml")
-        return self.get("locale_file", default)
+        locale_file = self.get("locale_file", "locale.yaml")
+        if os.path.isabs(locale_file):
+            return locale_file
+        return os.path.join(os.path.dirname(os.path.abspath(self.config_path)), locale_file)
 
     @property
     def admin_chat_ids(self) -> list:
