@@ -1,8 +1,8 @@
 # src/maintenance.py
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from src.models import MaintenanceMode, PowerSource, Base
-from src.config import get_config
+from power_herald.models import MaintenanceMode, PowerSource, Base
+from power_herald.config import get_config
 
 config = get_config()
 engine = create_engine(config.db_url)

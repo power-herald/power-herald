@@ -8,11 +8,11 @@ from aiohttp import web
 import asyncio
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from src.models import Chat
-from src.config import get_config
-from src.messages import bot_greeting
-from src.admin import chat_is_admin, chat_is_enabled, generator_keyboard, router as admin_router
-from src.lifecycle import use_stop_event
+from power_herald.models import Chat
+from power_herald.config import get_config
+from power_herald.messages import bot_greeting
+from power_herald.admin import chat_is_admin, chat_is_enabled, generator_keyboard, router as admin_router
+from power_herald.lifecycle import use_stop_event
 
 config = get_config()
 logger = logging.getLogger("bot")

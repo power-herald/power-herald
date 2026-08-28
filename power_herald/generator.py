@@ -1,10 +1,10 @@
 import logging
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from src.config import get_config
-from src.models import PowerSource, PowerSourceType, StateChangeType
-from src.notify import notify_state_change
-from src.state_store import latest_state, record_change, record_state
+from power_herald.config import get_config
+from power_herald.models import PowerSource, PowerSourceType, StateChangeType
+from power_herald.notify import notify_state_change
+from power_herald.state_store import latest_state, record_change, record_state
 import asyncio
 import datetime
 

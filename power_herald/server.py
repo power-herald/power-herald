@@ -4,7 +4,7 @@ import asyncio
 import logging
 
 from src import active_probe, bot, processor, probe, schedule
-from src.lifecycle import create_stop_event
+from power_herald.lifecycle import create_stop_event
 
 logger = logging.getLogger("server")
 
@@ -31,5 +31,10 @@ async def main() -> None:
         logger.info("Power Herald server stopped")
 
 
-if __name__ == "__main__":
+def run() -> None:
+    """Synchronous console-script entry point."""
     asyncio.run(main())
+
+
+if __name__ == "__main__":
+    run()

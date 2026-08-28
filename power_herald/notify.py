@@ -4,11 +4,11 @@ import asyncio
 from aiogram import Bot
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from src.models import PowerSource, PowerGroup, Period, Chat, Subscription, StateChangeType, PowerSourceType
+from power_herald.models import PowerSource, PowerGroup, Period, Chat, Subscription, StateChangeType, PowerSourceType
 import os
 import datetime
-from src.config import get_config
-from src.messages import generator_state_change_message, group_state_change_message, state_change_message
+from power_herald.config import get_config
+from power_herald.messages import generator_state_change_message, group_state_change_message, state_change_message
 
 config = get_config()
 logger = logging.getLogger("notifier")

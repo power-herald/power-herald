@@ -1,4 +1,4 @@
-# src/config.py
+# power_herald/config.py
 import yaml
 import os
 import datetime as dt
@@ -10,9 +10,11 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 load_dotenv()
 
+DEFAULT_CONFIG_PATH = os.environ.get("POWER_HERALD_CONFIG", "/etc/power-herald/config.yaml")
+
 class Config:
-    def __init__(self, config_path: str = "config.yaml"):
-        self.config_path = config_path
+    def __init__(self, config_path: str | None = None):
+        self.config_path = config_path or DEFAULT_CONFIG_PATH
         self.data = self._load_config()
 
     def _load_config(self) -> Dict[str, Any]:
@@ -75,7 +77,8 @@ class Config:
 
     @property
     def locale_file(self) -> str:
-        return self.get("locale_file", "./locale.yaml")
+        default = os.path.join(os.path.dirname(self.config_path) or ".", "locale.yaml")
+        return self.get("locale_file", default)
 
     @property
     def admin_chat_ids(self) -> list:
@@ -207,7 +210,7 @@ def configure_logging(settings: Config) -> None:
 # Global config instance
 config = None
 
-def load_config(config_path: str = "config.yaml") -> Config:
+def load_config(config_path: str | None = None) -> Config:
     global config
     config = Config(config_path)
     configure_logging(config)

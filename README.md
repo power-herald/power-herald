@@ -21,7 +21,7 @@ placeholder names intact when customizing a message.
 ## Architecture
 
 ```
-├── src/
+├── power_herald/
 │   ├── models.py           # ORM models (PowerSource, Chat, Subscription, etc.)
 │   ├── config.py           # Configuration loader (YAML)
 │   ├── bot.py              # Telegram webhook bot & it's main entry point
@@ -34,50 +34,60 @@ placeholder names intact when customizing a message.
 │   ├── outage_data.py      # Third-party source of outage schedule retrieving and parsing
 │   ├── outage_periods.py   # Outage period tracking & duration calculation
 │   ├── maintenance.py      # Maintenance mode management
-│   └── schedule.py         # Outage schedule notifications (from-today-for-today, from-today-for-tomorrow)
+│   ├── schedule.py         # Outage schedule notifications (from-today-for-today, from-today-for-tomorrow)
 │   ├── cli.py              # Console management client application for database entities
-│   ├── server.cli          # All-in-one daemon to run separated modules
+│   ├── server.py           # All-in-one daemon to run separated modules
 │   ├── lifecycle.py        # Daemon utils
 │   ├── messages.py         # User messages interpolation and preparation
-│   ├── state_store.py      # Power source state changes recording routines
-├── init.d/                 # OpenRC init script for the combined daemon
-├── config.yaml             # Configuration file (secrets & settings)
-├── locale.yaml             # Localization for user messages
+│   └── state_store.py      # Power source state changes recording routines
+├── pyproject.toml          # Python packaging metadata (console scripts, dependencies)
+├── config.yaml             # Configuration file (secrets & settings, installed to /etc/power-herald/)
+├── locale.yaml             # Localization for user messages (installed to /etc/power-herald/)
 └── README.md               # This file
 ```
+
+The OpenRC init script, conf.d defaults, and Gentoo ebuild live in the
+separate `power-herald` overlay (see the `portage/` repository next to this
+project) rather than in this source tree.
 
 ---
 
 ## Installation
 
-### Prerequisites
+### Gentoo (recommended)
+
+Power Herald ships as a Gentoo ebuild in the companion `power-herald` overlay.
+The ebuild pulls in all Python dependencies from the main tree, creates the
+`power-herald` system user/group, and installs the OpenRC service:
+
+```bash
+emerge --sync power-herald-overlay   # or eselect repository add power-herald-overlay <url>
+emerge --ask app-misc/power-herald
+```
+
+This installs:
+- the `ph-cli` and `ph-server` executables into `/usr/bin`
+- `config.yaml` and `locale.yaml` into `/etc/power-herald/` (edit these in place)
+- the OpenRC init script and `/etc/conf.d/power-herald` defaults
+
+See `OPENRC_SETUP.md` for enabling and managing the service.
+
+### Manual / development setup
 
 - Python 3.12+
 - MariaDB 10.2 or MySQL 5.7+ (or compatible)
-- Gentoo Linux with OpenRC (for daemon management)
 - Telegram bot token (from @BotFather)
 - Domain with SSL certificate (for webhooks)
 
-### Setup
-
-1. **Clone and prepare**:
 ```bash
 git clone <repo> power-herald
 cd power-herald
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
-```
-
-2. **Configure**:
-```bash
+pip install -e .
 cp config.yaml.example config.yaml
 # Edit config.yaml with your bot token, MySQL credentials, webhook URL, etc.
-```
-
-3. **Database**:
-```bash
-mysql -u root -p < schema.sql
+mysql -u root -p < assets/schema.sql
 ```
 
 ### Database CLI
@@ -107,12 +117,11 @@ are optional. State snapshots, state
 changes, and outage periods are list-only and support
 `--source-id`, `--state`, `--from`, `--to`, and `--json` filters.
 
-4. **OpenRC installation** (see OPENRC_SETUP.md):
+**OpenRC installation** (see OPENRC_SETUP.md): the ebuild installs the init
+script automatically; just enable and start it:
 ```bash
-sudo cp init.d/power-herald /etc/init.d/
-sudo chmod +x /etc/init.d/power-herald
 sudo rc-update add power-herald default
-# Start services...
+sudo rc-service power-herald start
 ```
 
 ---
@@ -206,8 +215,8 @@ sudo tail -f /var/log/power-herald/server.log
 ```
 
 For debugging, the individual workers remain available as standalone module
-entry points, for example `venv/bin/python -m src.bot` or
-`venv/bin/python -m src.processor`.
+entry points, for example `venv/bin/python -m power_herald.bot` or
+`venv/bin/python -m power_herald.processor`.
 
 ---
 

@@ -2,9 +2,9 @@ import datetime
 
 from sqlalchemy.orm import Session
 
-from src.models import SourceState, StateChange, StateChangeType
-from src.outage_periods import record_outage_transition
-from src.config import get_config
+from power_herald.models import SourceState, StateChange, StateChangeType
+from power_herald.outage_periods import record_outage_transition
+from power_herald.config import get_config
 
 
 def latest_state(session: Session, source_id: int, stable_only=False):

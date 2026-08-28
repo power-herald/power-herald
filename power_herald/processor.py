@@ -5,14 +5,14 @@ import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.config import get_config
-from src.maintenance import is_maintenance
-from src.models import PowerSource, PowerGroup, PowerSourceType, StateChangeType
-from src.notify import bot as notify_bot
-from src.notify import close_resources as close_notify_resources
-from src.notify import notify_group_state_change, notify_state_change
-from src.state_store import latest_change, latest_state, record_change
-from src.lifecycle import use_stop_event
+from power_herald.config import get_config
+from power_herald.maintenance import is_maintenance
+from power_herald.models import PowerSource, PowerGroup, PowerSourceType, StateChangeType
+from power_herald.notify import bot as notify_bot
+from power_herald.notify import close_resources as close_notify_resources
+from power_herald.notify import notify_group_state_change, notify_state_change
+from power_herald.state_store import latest_change, latest_state, record_change
+from power_herald.lifecycle import use_stop_event
 
 config = get_config()
 logger = logging.getLogger("processor")

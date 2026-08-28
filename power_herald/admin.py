@@ -6,10 +6,10 @@ from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from src.models import Chat, PowerSource, MaintenanceMode, Subscription, PowerSourceType, StateChangeType
-from src.config import get_config
-from src.messages import bot_greeting, get_message
-from src.generator import set_generator_state
+from power_herald.models import Chat, PowerSource, MaintenanceMode, Subscription, PowerSourceType, StateChangeType
+from power_herald.config import get_config
+from power_herald.messages import bot_greeting, get_message
+from power_herald.generator import set_generator_state
 
 config = get_config()
 engine = create_engine(config.db_url)
@@ -298,7 +298,7 @@ async def maintenance_cmd(message: types.Message):
         return
     enabled = args[2] == "on"
     comment = " ".join(args[3:]) if len(args) > 3 else None
-    from src.maintenance import set_maintenance
+    from power_herald.maintenance import set_maintenance
     set_maintenance(enabled, source_id, comment)
     response_message = get_message(
         "admin.maintenance_status",

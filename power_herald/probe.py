@@ -9,11 +9,11 @@ from ping3 import ping
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.config import get_config
-from src.maintenance import is_maintenance
-from src.models import PowerSource, PowerSourceType, StateChangeType, PingMethod
-from src.state_store import record_state
-from src.lifecycle import use_stop_event
+from power_herald.config import get_config
+from power_herald.maintenance import is_maintenance
+from power_herald.models import PowerSource, PowerSourceType, StateChangeType, PingMethod
+from power_herald.state_store import record_state
+from power_herald.lifecycle import use_stop_event
 
 config = get_config()
 logger = logging.getLogger("passive-prober")

@@ -4,11 +4,11 @@ import logging
 from aiohttp import web
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from src.models import PowerSource, PowerSourceType, StateChangeType
+from power_herald.models import PowerSource, PowerSourceType, StateChangeType
 import datetime
-from src.config import get_config
-from src.state_store import record_state
-from src.lifecycle import use_stop_event
+from power_herald.config import get_config
+from power_herald.state_store import record_state
+from power_herald.lifecycle import use_stop_event
 
 config = get_config()
 logger = logging.getLogger("active-prober")
@@ -42,7 +42,7 @@ async def handle_active_ping(request):
     logger.debug("Ping received from %s: source=%s, state=%s", request.remote, source_name, state)
     with Session() as session:
         source = session.query(PowerSource).filter_by(name=source_name, type=PowerSourceType.ACTIVE, enabled=True).first()
-        from src.maintenance import is_maintenance
+        from power_herald.maintenance import is_maintenance
         maintenance, _ = is_maintenance(source.id if source else None)
         if maintenance:
             logger.debug("Active ping rejected for %s: maintenance mode enabled", source_name)

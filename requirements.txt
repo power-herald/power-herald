@@ -3,7 +3,6 @@ aiohttp==3.14.3
 requests==2.32.3
 ping3==4.0.8
 sqlalchemy==2.0.52
-sqlalchemy.orm==1.2.10
 pymysql==1.2.0
 pyyaml==6.0.3
-dotenv==1.2.3
+python-dotenv==1.2.3

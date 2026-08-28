@@ -6,9 +6,9 @@ from aiogram import Bot
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.config import get_config
-from src.messages import schedule_message_from_json
-from src.models import (
+from power_herald.config import get_config
+from power_herald.messages import schedule_message_from_json
+from power_herald.models import (
     Base,
     Chat,
     Outage,
@@ -16,8 +16,8 @@ from src.models import (
     OutageNotification,
     OutageNotificationType,
 )
-from src.outage_data import content_hash, fetch_outage_data, message_hash, prepare_messages
-from src.lifecycle import use_stop_event
+from power_herald.outage_data import content_hash, fetch_outage_data, message_hash, prepare_messages
+from power_herald.lifecycle import use_stop_event
 
 config = get_config()
 logger = logging.getLogger("schedule")

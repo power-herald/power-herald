@@ -1,45 +1,45 @@
 # Installation instructions for OpenRC daemon integration
 
+Power Herald is packaged as a Gentoo ebuild (`app-misc/power-herald`) in the
+companion `power-herald` overlay. The ebuild takes care of the OpenRC
+integration described below; this document explains what it does and how to
+manage the resulting service.
+
 ## Prerequisites
+
 - Gentoo Linux with OpenRC
-- Python 3.12+ venv in /opt/power-herald
-- User `powerherald` and group `powerherald` created
+- The `power-herald` overlay added to your Portage configuration
+
+## What the ebuild installs
+
+- The application and its Python dependencies (via `dev-python/*` packages)
+- The `power-herald` system user and group (`acct-user/power-herald`,
+  `acct-group/power-herald`)
+- `/usr/bin/ph-server` and `/usr/bin/ph-cli`
+- `/etc/power-herald/config.yaml` and `/etc/power-herald/locale.yaml`
+- `/etc/init.d/power-herald` and `/etc/conf.d/power-herald`
+- `/var/log/power-herald/`, owned by `power-herald:power-herald`
 
 ## Setup Steps
 
-1. Create user and group:
+1. Install the package:
 ```bash
-useradd -m -d /opt/power-herald powerherald
-groupadd powerherald
-usermod -a -G powerherald powerherald
+sudo emerge --ask app-misc/power-herald
 ```
 
-2. Copy init scripts to /etc/init.d/:
+2. Edit the configuration (installed with restrictive permissions since it
+   holds secrets):
 ```bash
-sudo cp init.d/power-herald /etc/init.d/
-sudo chmod +x /etc/init.d/power-herald
+sudo -e /etc/power-herald/config.yaml
 ```
 
-3. Install project to /opt/power-herald:
-```bash
-sudo mkdir -p /opt/power-herald
-sudo cp -r . /opt/power-herald/
-sudo chown -R powerherald:powerherald /opt/power-herald
-```
+3. Review `/etc/conf.d/power-herald` if you need to change the user, group,
+   log files, or pidfile used by the init script.
 
-4. Configure config.yaml:
+4. Enable and start the service:
 ```bash
-sudo cp /opt/power-herald/config.yaml /etc/power-herald/config.yaml
-sudo chown powerherald:powerherald /etc/power-herald/config.yaml
-sudo chmod 600 /etc/power-herald/config.yaml
-```
-
-5. Enable and start services:
-```bash
-sudo rc-service power-herald start
-
-# Add to default runlevel (optional)
 sudo rc-update add power-herald default
+sudo rc-service power-herald start
 ```
 
 ## Management
@@ -55,3 +55,4 @@ sudo rc-service power-herald restart
 # View logs
 sudo tail -f /var/log/power-herald/server.log
 ```
+

@@ -12,7 +12,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.models import (
+from power_herald.models import (
     Base,
     Chat,
     GeneratorSource,
@@ -82,7 +82,7 @@ def add_entity_commands(subparsers: Any, name: str, fields: dict[str, dict[str, 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="ph-cli", description="Manage Power Herald database records")
-    parser.add_argument("--config", default="config.yaml", help="configuration file")
+    parser.add_argument("--config", default=None, help="configuration file (default: /etc/power-herald/config.yaml)")
     parser.add_argument("--db-url", help="SQLAlchemy database URL, overriding config.yaml")
     commands = parser.add_subparsers(dest="command", required=True)
 
@@ -224,7 +224,7 @@ def list_history(session: Session, model: Any, arguments: argparse.Namespace) ->
 def run(arguments: argparse.Namespace) -> int:
     db_url = arguments.db_url
     if db_url is None:
-        from src.config import Config
+        from power_herald.config import Config
 
         db_url = Config(arguments.config).db_url
     engine = create_engine(db_url)

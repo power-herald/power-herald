@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 import yaml
 
-from src.config import get_config
+from power_herald.config import get_config
 
 def _load_locale() -> dict[str, Any]:
     locale_path = Path(get_config().locale_file)

@@ -2,8 +2,8 @@
 import logging
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from src.models import PowerSource, StateChange, Period, StateChangeType
-from src.config import get_config
+from power_herald.models import PowerSource, StateChange, Period, StateChangeType
+from power_herald.config import get_config
 
 config = get_config()
 logger = logging.getLogger("outage")
