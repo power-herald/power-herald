@@ -24,7 +24,7 @@ logger = logging.getLogger("schedule")
 
 async def update_once() -> bool:
     logger.info("Starting outage schedule update from %s", config.outage_data_source)
-    engine = create_engine(config.db_url)
+    engine = create_engine(config.db_url, **config.db_engine_options)
     Base.metadata.create_all(engine)
     data = fetch_outage_data(source=config.outage_data_source)
     current_hash = content_hash(data)
@@ -73,7 +73,7 @@ async def send_schedule_once(
     notification_type: OutageNotificationType, target_date: dt.date
 ) -> bool:
     today = config.now().date()
-    engine = create_engine(config.db_url)
+    engine = create_engine(config.db_url, **config.db_engine_options)
     Base.metadata.create_all(engine)
     with sessionmaker(bind=engine)() as session:
         previous_notification = (
@@ -118,7 +118,7 @@ async def send_messages(
     if not messages:
         logger.info("No changed outage messages to send")
         return
-    engine = create_engine(config.db_url)
+    engine = create_engine(config.db_url, **config.db_engine_options)
     bot = Bot(token=token)
     try:
         sent_at = config.now()

@@ -223,11 +223,14 @@ def list_history(session: Session, model: Any, arguments: argparse.Namespace) ->
 
 def run(arguments: argparse.Namespace) -> int:
     db_url = arguments.db_url
+    engine_options = {}
     if db_url is None:
         from power_herald.config import Config
 
-        db_url = Config(arguments.config).db_url
-    engine = create_engine(db_url)
+        settings = Config(arguments.config)
+        db_url = settings.db_url
+        engine_options = settings.db_engine_options
+    engine = create_engine(db_url, **engine_options)
     session_factory = sessionmaker(bind=engine)
     if arguments.command == "db":
         Base.metadata.create_all(engine)

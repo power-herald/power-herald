@@ -12,7 +12,7 @@ config = get_config()
 logger = logging.getLogger("generator")
 logging.getLogger("aiohttp.access").setLevel(logging.WARNING)
 
-engine = create_engine(config.db_url)
+engine = create_engine(config.db_url, **config.db_engine_options)
 Session = sessionmaker(bind=engine)
 
 async def set_generator_state(source_id: int, state: StateChangeType) -> bool:

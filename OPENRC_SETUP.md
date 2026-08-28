@@ -19,6 +19,18 @@ manage the resulting service.
 - `/etc/power-herald/config.yaml` and `/etc/power-herald/locale.yaml`
 - `/etc/init.d/power-herald` and `/etc/conf.d/power-herald`
 - `/var/log/power-herald/`, owned by `power-herald:power-herald`
+- `/var/lib/power-herald/` when installed with the `sqlite` USE flag
+
+Choose exactly one database backend when installing:
+
+```bash
+sudo emerge --ask app-misc/power-herald     # defaults to MariaDB
+sudo emerge --ask 'app-misc/power-herald[sqlite,-mariadb]'
+```
+
+The SQLite USE flag changes the installed config to use
+`/var/lib/power-herald/power_herald.db`. Its tables are created automatically;
+the repository's `assets/schema.sql` is only for MariaDB/MySQL.
 
 ## Setup Steps
 

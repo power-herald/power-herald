@@ -17,7 +17,7 @@ from power_herald.lifecycle import use_stop_event
 config = get_config()
 logger = logging.getLogger("processor")
 
-engine = create_engine(config.db_url)
+engine = create_engine(config.db_url, **config.db_engine_options)
 Session = sessionmaker(bind=engine)
 
 

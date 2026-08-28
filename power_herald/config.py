@@ -58,9 +58,31 @@ class Config:
         return self.get("telegram.webhook_port", 8080)
 
     @property
+    def db_driver(self) -> str:
+        driver = self.get("database.driver", "sqlite")
+        if driver not in {"sqlite", "mysql+pymysql"}:
+            raise ValueError("database.driver must be either 'sqlite' or 'mysql+pymysql'")
+        return driver
+
+    @property
+    def db_engine_options(self) -> dict[str, dict[str, bool]]:
+        if self.db_driver == "sqlite":
+            return {"connect_args": {"check_same_thread": False}}
+        return {}
+
+    @property
     def db_url(self) -> str:
-        db = self.get("database")
-        return f"{db['driver']}://{db['user']}:{db['password']}@{db['host']}:{db['port']}/{db['database']}"
+        db = self.get("database", {})
+        if self.db_driver == "sqlite":
+            database = db.get("database", "./power_herald.db")
+            if not isinstance(database, str) or not database:
+                raise ValueError("database.database must be a non-empty SQLite database path")
+            return f"sqlite:///{database}"
+
+        return (
+            f"{self.db_driver}://{db['user']}:{db['password']}"
+            f"@{db['host']}:{db['port']}/{db['database']}"
+        )
 
     @property
     def timezone(self) -> ZoneInfo:

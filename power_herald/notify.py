@@ -13,7 +13,7 @@ from power_herald.messages import generator_state_change_message, group_state_ch
 config = get_config()
 logger = logging.getLogger("notifier")
 
-engine = create_engine(config.db_url)
+engine = create_engine(config.db_url, **config.db_engine_options)
 Session = sessionmaker(bind=engine)
 bot = Bot(token=config.bot_token)
 

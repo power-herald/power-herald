@@ -10,7 +10,8 @@ timezone: "Europe/Kyiv"
 locale_file: "./locale.yaml"
 
 database:
-  driver: "mysql+pymysql"
+  driver: "sqlite" # or "mysql+pymysql"
+  database: "./power_herald.db"
   host: "localhost"
   port: 3306
   user: "power_herald"

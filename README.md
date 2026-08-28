@@ -14,7 +14,7 @@ placeholder names intact when customizing a message.
 - **Per-chat subscriptions**: Different buildings/groups can subscribe to specific power sources
 - **Admin controls**: Manual activation approval, maintenance mode management, generator event configuration
 - **Scheduled outages**: Daily posting of outage schedules (third-party source, aggregated from Yasno/DTEK)
-- **Database persistence**: ORM-based MariaSQL storage of state changes, outages, and subscriptions
+- **Database persistence**: ORM-based MariaDB/MySQL or SQLite storage of state changes, outages, and subscriptions
 - **OpenRC integration**: Systemd-free daemon management for Gentoo Linux
 - **Webhook-based**: No long polling; efficient webhook integration with Telegram
 
@@ -75,7 +75,7 @@ See `OPENRC_SETUP.md` for enabling and managing the service.
 ### Manual / development setup
 
 - Python 3.12+
-- MariaDB 10.2 or MySQL 5.7+ (or compatible)
+- SQLite (built into Python), or MariaDB 10.2 / MySQL 5.7+
 - Telegram bot token (from @BotFather)
 - Domain with SSL certificate (for webhooks)
 
@@ -84,10 +84,16 @@ git clone <repo> power-herald
 cd power-herald
 python3 -m venv venv
 source venv/bin/activate
+# Only SQLite support:
 pip install -e .
+# Extra driver for MariaDB/MySQL support:
+# pip install -e ".[mariadb]"
 cp config.yaml.example config.yaml
-# Edit config.yaml with your bot token, MySQL credentials, webhook URL, etc.
-mysql -u root -p < assets/schema.sql
+# Edit config.yaml with your bot token, database settings, webhook URL, etc.
+# For SQLite, set database.driver to sqlite and database.database to a file path.
+# The tables are created automatically by the CLI:
+./ph-cli db restore
+# assets/schema.sql is only for MariaDB/MySQL deployments.
 ```
 
 ### Database CLI
@@ -137,6 +143,9 @@ telegram:
   webhook_secret: "YOUR_WEBHOOK_SECRET"
 
 database:
+  driver: "sqlite"  # or "mysql+pymysql"
+  database: "./power_herald.db"
+  # For mysql+pymysql:
   host: "localhost"
   user: "power_herald"
   password: "YOUR_PASSWORD"
@@ -280,14 +289,14 @@ entry points, for example `venv/bin/python -m power_herald.bot` or
 
 ## Future Enhancements
 
-- [] Web dashboard for status monitoring
-- [] Telegram inline keyboards for quick actions
-- [] Historical stats and analytics notifications
-- [] Other messangers integration
-- [] Email fallback notifications
-- [] Docker image
-- [] Systemd integration
-- [] Debian-based package distribution (`*.deb`) 
+- [ ] Web dashboard for status monitoring
+- [ ] Telegram inline keyboards for quick actions
+- [ ] Historical stats and analytics notifications
+- [ ] Other messangers integration
+- [ ] Email fallback notifications
+- [ ] Docker image
+- [ ] Systemd integration
+- [ ] Debian-based package distribution (`*.deb`) 
 
 ## License
 

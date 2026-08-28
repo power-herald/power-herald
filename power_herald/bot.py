@@ -18,7 +18,7 @@ config = get_config()
 logger = logging.getLogger("bot")
 logging.getLogger("aiohttp.access").setLevel(logging.WARNING)
 
-engine = create_engine(config.db_url)
+engine = create_engine(config.db_url, **config.db_engine_options)
 Session = sessionmaker(bind=engine)
 bot = Bot(token=config.bot_token)
 dp = Dispatcher()

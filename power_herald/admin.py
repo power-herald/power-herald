@@ -12,7 +12,7 @@ from power_herald.messages import bot_greeting, get_message
 from power_herald.generator import set_generator_state
 
 config = get_config()
-engine = create_engine(config.db_url)
+engine = create_engine(config.db_url, **config.db_engine_options)
 Session = sessionmaker(bind=engine)
 
 router = Router()

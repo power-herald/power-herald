@@ -8,7 +8,7 @@ from power_herald.config import get_config
 config = get_config()
 logger = logging.getLogger("outage")
 
-engine = create_engine(config.db_url)
+engine = create_engine(config.db_url, **config.db_engine_options)
 Session = sessionmaker(bind=engine)
 
 def record_outage_transition(session, source_id: int, state: StateChangeType, timestamp):

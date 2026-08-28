@@ -5,7 +5,7 @@ from power_herald.models import MaintenanceMode, PowerSource, Base
 from power_herald.config import get_config
 
 config = get_config()
-engine = create_engine(config.db_url)
+engine = create_engine(config.db_url, **config.db_engine_options)
 Session = sessionmaker(bind=engine)
 
 def is_maintenance(source_id=None):

@@ -4,7 +4,7 @@
 
 - **OS**: Gentoo Linux (OpenRC)
 - **Python**: 3.12+
-- **MySQL**: 5.7+ or MariaDB 10.2+
+- **Database**: SQLite, MySQL 5.7+, or MariaDB 10.2+
 - **Network**: 
   - Outbound HTTPS for Telegram API
   - Inbound HTTPS for webhook (443 → 8080)
@@ -25,7 +25,7 @@ sudo mkdir -p /opt/power-herald /var/log/power-herald
 sudo chown -R powerherald:powerherald /opt/power-herald /var/log/power-herald
 
 # Install Python and dependencies
-sudo emerge -av python:3.12 mysql-connector-python
+sudo emerge -av python:3.12
 ```
 
 ### 2. Deploy Application
@@ -56,10 +56,20 @@ sudo nano /etc/power-herald/config.yaml
 **Critical config fields**:
 - `telegram.token` - Get from @BotFather
 - `telegram.webhook_url` - Your domain URL (e.g., https://your.domain/webhook)
-- `database.*` - MySQL credentials and connection details
+- `database.*` - SQLite path, or MySQL/MariaDB credentials and connection details
 - `admin.chat_ids` - Your Telegram user ID(s)
 
 ### 4. Initialize Database
+
+For SQLite, use a local database file. SQLAlchemy creates the complete schema
+when the database command runs:
+
+```bash
+./ph-cli db restore
+```
+
+For MySQL/MariaDB, create the database and user, then import the server
+schema. `assets/schema.sql` is intentionally MySQL/MariaDB-only:
 
 ```bash
 # Create database and user
