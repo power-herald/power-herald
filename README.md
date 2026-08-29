@@ -1,10 +1,37 @@
 # Power Herald Bot
 
+![_](_.png)
+
+With glory from Ukraine! 🇺🇦
+
 A Python-based Telegram bot for notifying subscribers about power outages, generator events with maintenance windows, outages schedule, etc. Supports multiple chats, admin-controlled activation, and flexible power source management.
 
 User-facing messages are configured in `locale.yaml`. Message templates use
 Python format placeholders such as `{chat_id}` and `{source_name}`; keep the
 placeholder names intact when customizing a message.
+
+## Table of Contents
+
+- [Features](#features)
+- [Architecture](#architecture)
+- [Installation](#installation)
+  - [Gentoo (recommended)](#gentoo-recommended)
+  - [Debian / Ubuntu / Linux Mint](#debian--ubuntu--linux-mint)
+  - [Manual / development setup](#manual--development-setup)
+  - [Docker](#docker)
+  - [Database CLI](#database-cli)
+- [Configuration](#configuration)
+- [Usage](#usage)
+  - [Telegram Bot Commands (Admin Only)](#telegram-bot-commands-admin-only)
+  - [Power Source Types](#power-source-types)
+  - [HTTP Endpoints](#http-endpoints)
+  - [Daemon Management (OpenRC)](#daemon-management-openrc)
+- [Database Schema](#database-schema)
+- [Workflow Examples](#workflow-examples)
+- [Troubleshooting](#troubleshooting)
+- [Future Enhancements](#future-enhancements)
+- [License](#license)
+- [Support](#support)
 
 ## Features
 
@@ -71,6 +98,35 @@ This installs:
 - the OpenRC init script and `/etc/conf.d/power-herald` defaults
 
 See `OPENRC_SETUP.md` for enabling and managing the service.
+
+### Debian / Ubuntu / Linux Mint
+
+Power Herald is available as a `.deb` package for Debian-based systems. Prebuilt
+packages are available in the releases section. Install with:
+
+```bash
+sudo dpkg -i power-herald-0.1.0-1_amd64.deb
+sudo apt-get install -f  # Install any missing dependencies
+```
+
+This installs:
+- the `ph-cli` and `ph-server` executables into `/usr/bin`
+- `config.yaml` and `locale.yaml` into `/etc/power-herald/` (edit these in place)
+- the systemd service unit
+
+Enable and start the service:
+
+```bash
+sudo systemctl enable power-herald
+sudo systemctl start power-herald
+sudo systemctl status power-herald
+```
+
+View logs with:
+
+```bash
+sudo journalctl -u power-herald -f
+```
 
 ### Manual / development setup
 
@@ -341,13 +397,13 @@ entry points, for example `venv/bin/python -m power_herald.bot` or
 - [ ] Historical stats and analytics notifications
 - [ ] Other messangers integration
 - [ ] Email fallback notifications
-- [ ] Docker image
-- [ ] Systemd integration
-- [ ] Debian-based package distribution (`*.deb`) 
+- [x] Docker image
+- [x] Systemd integration
+- [x] Debian-based package distribution (`*.deb`) 
 
 ## License
 
-MIT License at [LICENSE]
+MIT License at [LICENSE](LICENSE)
 
 ## Support
 
