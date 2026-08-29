@@ -82,7 +82,7 @@ def add_entity_commands(subparsers: Any, name: str, fields: dict[str, dict[str, 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="ph-cli", description="Manage Power Herald database records")
-    parser.add_argument("--config", default=None, help="configuration file (default: /etc/power-herald/config.yaml)")
+    parser.add_argument("--config", default="/etc/power-herald/config.yaml", help="configuration file")
     parser.add_argument("--db-url", help="SQLAlchemy database URL, overriding config.yaml")
     commands = parser.add_subparsers(dest="command", required=True)
 
