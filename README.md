@@ -128,6 +128,8 @@ View logs with:
 sudo journalctl -u power-herald -f
 ```
 
+❗ Check [PING3 troubleshooting page][ping3-ts] to permit raw sockets usage.
+
 ### Manual / development setup
 
 - Python 3.12+
@@ -372,7 +374,7 @@ entry points, for example `venv/bin/python -m power_herald.bot` or
 - Check Telegram bot @BotFather settings
 
 ## Regular ping is not working
-- Check (PING3 Troubleshooting)[ping3-ts], especially on Debian-based systems
+- Check [PING3 Troubleshooting][ping3-ts], especially on Debian-based systems
 
 ### No state changes recorded
 - Verify passive probe interval (default 30s)
