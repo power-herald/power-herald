@@ -1,5 +1,6 @@
 # src/active_probe.py
 import asyncio
+import hmac
 import logging
 from aiohttp import web
 from sqlalchemy.orm import sessionmaker
@@ -39,6 +40,7 @@ async def handle_active_ping(request):
     data = await request.json()
     source_name = data.get("name")
     state = data.get("state")  # 'online' or 'offline'
+    supplied_secret = data.get("secret")
     logger.debug("Ping received from %s: source=%s, state=%s", request.remote, source_name, state)
     with Session() as session:
         source = session.query(PowerSource).filter_by(name=source_name, type=PowerSourceType.ACTIVE, enabled=True).first()
@@ -50,6 +52,10 @@ async def handle_active_ping(request):
         if not source:
             logger.debug("Active ping rejected: source not found or disabled: %s", source_name)
             return web.json_response({"error": "Source not found or disabled"}, status=404)
+        if source.active and source.active.secret is not None:
+            if not isinstance(supplied_secret, str) or not hmac.compare_digest(source.active.secret, supplied_secret):
+                logger.warning("Active ping rejected for %s: invalid secret", source_name)
+                return web.json_response({"error": "Invalid secret"}, status=401)
         try:
             state_enum = StateChangeType(state)
         except Exception:

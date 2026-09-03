@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from power_herald.models import (
     Base,
+    ActiveSource,
     Chat,
     GeneratorSource,
     MaintenanceMode,
@@ -94,7 +95,7 @@ def build_parser() -> argparse.ArgumentParser:
     })
     add_entity_commands(commands, "sources", {
         "name": {"required": True}, "type": {"required": True, "type": lambda value: enum_value(PowerSourceType, value)},
-        "address": {}, "ping_method": {"type": lambda value: enum_value(PingMethod, value)},
+        "secret": {}, "address": {}, "ping_method": {"type": lambda value: enum_value(PingMethod, value)},
         "enabled": {"type": int}, "is_generator": {"type": int}, "description": {}, "work_duration_minutes": {"type": int},
         "maintenance_duration_minutes": {"type": int},
     })
@@ -136,9 +137,11 @@ def serialize(record: Any) -> dict[str, Any]:
             value = value.name.lower()
         result[column.name] = value
     if isinstance(record, PowerSource):
+        active = record.active
         passive = record.passive
         generator = record.generator
         result.update({
+            "secret": None if active is None else active.secret,
             "address": None if passive is None else passive.address,
             "ping_method": None if passive is None else passive.ping_method.name.lower(),
             "work_duration_minutes": None if generator is None else generator.work_duration_minutes,
@@ -178,6 +181,15 @@ def apply_values(record: Any, arguments: argparse.Namespace) -> None:
 
 
 def apply_source_type_values(source: PowerSource, arguments: argparse.Namespace) -> None:
+    if source.type == PowerSourceType.ACTIVE:
+        source.passive = None
+        source.generator = None
+        if source.active is None:
+            source.active = ActiveSource()
+        if source.active is not None and getattr(arguments, "secret", None) is not None:
+            source.active.secret = arguments.secret
+        return
+    source.active = None
     if source.type == PowerSourceType.PASSIVE:
         source.generator = None
         subtype = source.passive

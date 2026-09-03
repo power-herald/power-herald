@@ -18,6 +18,14 @@ CREATE TABLE IF NOT EXISTS power_sources (
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS active_sources (
+    source_id INT NOT NULL,
+    secret VARCHAR(256) NULL,
+    PRIMARY KEY (source_id),
+    CONSTRAINT fk_active_sources_source
+        FOREIGN KEY (source_id) REFERENCES power_sources (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS passive_sources (
     source_id INT NOT NULL,
     address VARCHAR(256) NOT NULL,

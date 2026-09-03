@@ -27,6 +27,7 @@ placeholder names intact when customizing a message.
   - [HTTP Endpoints](#http-endpoints)
   - [Daemon Management (OpenRC)](#daemon-management-openrc)
 - [Database Schema](#database-schema)
+- [Database Security](#database-security)
 - [Workflow Examples](#workflow-examples)
 - [Troubleshooting](#troubleshooting)
 - [Future Enhancements](#future-enhancements)
@@ -210,6 +211,7 @@ Set `POWER_HERALD_CONFIG` when mounting the configuration at a different path.
 ./ph-cli db restore
 ./ph-cli groups add --name "Main buildings" --description "Primary sites"
 ./ph-cli sources add --name grid-a --type passive --address 192.0.2.10 --ping-method ping
+./ph-cli sources add --name controller-a --type active --secret "CHANGE_ME"
 ./ph-cli group-sources add --group-id 1 --source-id 1
 ./ph-cli group-sources list
 ./ph-cli sources list --json
@@ -289,7 +291,8 @@ See `config.yaml` for all available options.
 
 #### 2. Active (Device pings bot)
 - Device sends HTTP POST to `/ping` endpoint
-- Payload: `{"name": "source_name", "state": "online|offline"}`
+- Payload: `{"name": "source_name", "state": "online|offline", "secret": "..."}`
+- Set an optional per-source secret with `ph-cli sources add|update --secret`; requests for configured secrets must include a matching value
 - Use case: Smart devices, controllers, etc.
 
 #### 3. Manual control (By user via chat)
@@ -306,7 +309,8 @@ See `config.yaml` for all available options.
 POST /ping
 {
   "name": "source_name",
-  "state": "online|offline"
+  "state": "online|offline",
+  "secret": "source_secret"
 }
 ```
 
@@ -339,11 +343,23 @@ entry points, for example `venv/bin/python -m power_herald.bot` or
 ### Key Tables
 
 - `power_sources` - Device/generator definitions
+- `active_sources` - Optional active-probe secrets mapped to power sources
 - `state_changes` - State transitions (online/offline)
 - `periods` - Online/offline source state periods with start/stop timestamps
 - `chats` - Telegram chats subscribed to service
 - `subscriptions` - Chat-to-source mappings
 - `maintenance_modes` - Global or per-source maintenance toggles
+
+## Database Security
+
+Power Herald accesses its SQLite, MariaDB, and MySQL storage through SQLAlchemy
+ORM query builders. Values from HTTP requests, Telegram updates, CLI arguments,
+and configuration are bound as query parameters rather than interpolated into
+SQL statements, protecting supported database operations from SQL injection.
+
+When adding database access, continue using SQLAlchemy expressions or bound
+parameters for `text()` queries. Do not construct SQL by concatenating or
+formatting untrusted values into a statement.
 
 ## Workflow Examples
 

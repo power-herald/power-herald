@@ -30,6 +30,9 @@ class PowerSource(Base):
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     is_generator: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
+    active: Mapped[ActiveSource | None] = relationship(
+        back_populates='source', uselist=False, cascade='all, delete-orphan'
+    )
     passive: Mapped[PassiveSource | None] = relationship(
         back_populates='source', uselist=False, cascade='all, delete-orphan'
     )
@@ -39,6 +42,13 @@ class PowerSource(Base):
     groups: Mapped[list[PowerGroup]] = relationship(
         secondary='power_group_sources', back_populates='sources'
     )
+
+
+class ActiveSource(Base):
+    __tablename__ = 'active_sources'
+    source_id: Mapped[int] = mapped_column(ForeignKey('power_sources.id'), primary_key=True)
+    secret: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    source: Mapped[PowerSource] = relationship(back_populates='active')
 
 
 class PassiveSource(Base):

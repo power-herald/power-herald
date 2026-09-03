@@ -22,7 +22,8 @@ Devices send their power state to this endpoint. Used for active monitoring wher
 ```json
 {
   "name": "grid_line_main",
-  "state": "online|offline"
+  "state": "online|offline",
+  "secret": "optional_per_source_secret"
 }
 ```
 
@@ -36,6 +37,7 @@ Devices send their power state to this endpoint. Used for active monitoring wher
 ### Error Responses
 - 404: Source not found or not configured as active
 - 400: Invalid state value
+- 401: Invalid active-source secret
 - 403: Maintenance mode enabled
 
 ---
