@@ -199,7 +199,7 @@ class Config:
         return self.get("outages.json_file")
 
     @property
-    def outage_update_interval(self) -> int:
+    def outage_update_delay(self) -> int:
         return parse_duration(self.get("outages.delay", "30m"), "outages.delay")
 
     @property
