@@ -161,7 +161,11 @@ async def main(stop_event=None) -> None:
             except Exception:
                 logger.exception("Outage schedule update failed")
             now = config.now()
-            if now.time() >= config.outage_schedule_send_time_today:
+
+            # TODAY
+            if (config.outage_schedule_send_time_today is not None
+                and now.time() >= config.outage_schedule_send_time_today
+            ):
                 try:
                     await send_schedule_once(
                         OutageNotificationType.TODAY,
@@ -169,7 +173,11 @@ async def main(stop_event=None) -> None:
                     )
                 except Exception:
                     logger.exception("Today's outage schedule send failed")
-            if now.time() >= config.outage_schedule_send_time_tomorrow:
+
+            # TOMORROW
+            if (config.outage_schedule_send_time_tomorrow is not None
+                and now.time() >= config.outage_schedule_send_time_tomorrow
+            ):
                 try:
                     await send_schedule_once(
                         OutageNotificationType.TOMORROW,
@@ -177,6 +185,8 @@ async def main(stop_event=None) -> None:
                     )
                 except Exception:
                     logger.exception("Tomorrow's outage schedule send failed")
+
+            # Wait for the next update or schedule send time
             logger.debug(
                 "Waiting %s seconds before the next outage schedule update",
                 config.outage_update_delay,
@@ -190,12 +200,16 @@ async def main(stop_event=None) -> None:
                     config.outage_schedule_send_time_today,
                     config.outage_schedule_send_time_tomorrow,
                 )
+                if schedule_time is not None
             ]
             next_schedule = min(
-                schedule + (dt.timedelta(days=1) if schedule <= now else dt.timedelta())
-                for schedule in next_schedules
+                (
+                    schedule + (dt.timedelta(days=1) if schedule <= now else dt.timedelta())
+                    for schedule in next_schedules
+                ),
+                default=None,
             )
-            wait_seconds = min(
+            wait_seconds = config.outage_update_delay if next_schedule is None else min(
                 config.outage_update_delay,
                 max(1, int((next_schedule - now).total_seconds())),
             )
