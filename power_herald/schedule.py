@@ -179,7 +179,7 @@ async def main(stop_event=None) -> None:
                     logger.exception("Tomorrow's outage schedule send failed")
             logger.debug(
                 "Waiting %s seconds before the next outage schedule update",
-                config.outage_update_interval_seconds,
+                config.outage_update_interval,
             )
             now = config.now()
             next_schedules = [
@@ -196,7 +196,7 @@ async def main(stop_event=None) -> None:
                 for schedule in next_schedules
             )
             wait_seconds = min(
-                config.outage_update_interval_seconds,
+                config.outage_update_interval,
                 max(1, int((next_schedule - now).total_seconds())),
             )
             try:

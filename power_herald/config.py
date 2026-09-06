@@ -3,6 +3,7 @@ import yaml
 import os
 import datetime as dt
 import logging
+import re
 import sys
 from typing import Dict, Any
 from dotenv import load_dotenv
@@ -11,6 +12,17 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 load_dotenv()
 
 DEFAULT_CONFIG_PATH = os.environ.get("POWER_HERALD_CONFIG", "./config.yaml")
+
+
+def parse_duration(value: Any, key: str) -> int:
+    if not isinstance(value, str):
+        raise ValueError(f"{key} must be a duration in whole minutes or seconds (for example, 5m or 10s)")
+    match = re.fullmatch(r"([1-9]\d*)([ms])", value)
+    if not match:
+        raise ValueError(f"{key} must be a duration in whole minutes or seconds (for example, 5m or 10s)")
+    amount, unit = match.groups()
+    return int(amount) * (60 if unit == "m" else 1)
+
 
 class Config:
     def __init__(self, config_path: str | None = None):
@@ -128,11 +140,11 @@ class Config:
 
     @property
     def passive_probe_interval(self) -> int:
-        return self.get("probing.passive.interval_seconds", 30)
+        return parse_duration(self.get("probing.passive.interval", "30s"), "probing.passive.interval")
 
     @property
     def passive_probe_timeout(self) -> int:
-        return self.get("probing.passive.timeout_seconds", 2)
+        return parse_duration(self.get("probing.passive.timeout", "2s"), "probing.passive.timeout")
 
     @property
     def passive_probe_count(self) -> int:
@@ -159,11 +171,13 @@ class Config:
 
     @property
     def active_probe_timeout(self) -> int:
-        return self.get("probing.active.timeout_seconds", self.passive_probe_interval)
+        value = self.get("probing.active.timeout")
+        return self.passive_probe_interval if value is None else parse_duration(value, "probing.active.timeout")
 
     @property
     def state_processor_interval(self) -> int:
-        return self.get("probing.processor.interval_seconds", self.passive_probe_interval)
+        value = self.get("probing.processor.interval")
+        return self.passive_probe_interval if value is None else parse_duration(value, "probing.processor.interval")
 
     @property
     def notifications_track_outages(self) -> bool:
@@ -185,11 +199,8 @@ class Config:
         return self.get("outages.json_file")
 
     @property
-    def outage_update_interval_seconds(self) -> int:
-        value = self.get("outages.delay_seconds", 1800)
-        if not isinstance(value, int) or value <= 0:
-            raise ValueError("outages.delay_seconds must be a positive integer")
-        return value
+    def outage_update_interval(self) -> int:
+        return parse_duration(self.get("outages.delay", "30m"), "outages.delay")
 
     @property
     def outage_schedule_send_time_tomorrow(self) -> dt.time | None:
