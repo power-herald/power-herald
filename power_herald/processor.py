@@ -111,7 +111,7 @@ async def main(stop_event=None):
         while not stop_event.is_set():
             await process_sources()
             try:
-                await asyncio.wait_for(stop_event.wait(), timeout=config.state_processor_interval)
+                await asyncio.wait_for(stop_event.wait(), timeout=config.state_processor_delay)
             except asyncio.TimeoutError:
                 pass
         logger.info("Shutdown signal received")

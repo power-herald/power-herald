@@ -21,14 +21,14 @@ database:
     database: "power_herald"
 
 admin:
-  chat_ids: ["YOUR_ADMIN_CHAT_ID_1", "YOUR_ADMIN_CHAT_ID_2"]
+  chat_ids: [YOUR_ADMIN_CHAT_ID_1, YOUR_ADMIN_CHAT_ID_2]
 
 probing:
   passive:
     enabled: true
-    interval: 10s
+    delay: 10s
     timeout: 1s
-    probe_count: 3
+    retry_count: 3
   active:
     enabled: true
     address: "0.0.0.0"
@@ -36,7 +36,7 @@ probing:
     endpoint: "/ping"
     timeout: 10s
   processor:
-    interval: 20s
+    delay: 20s
 
 notifications:
   track_outages: true

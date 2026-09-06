@@ -57,15 +57,17 @@ async def probe_source(session, source):
         logger.debug("Maintenance mode enabled for %s, skipping probe.", source.name)
         return
     states = []
-    for _ in range(config.passive_probe_count):
+    for index in range(config.passive_retry_count):
         online = await ping_host(
             source.passive.address, config.passive_probe_timeout, source.passive.ping_method
         )
-        states.append(StateChangeType.ONLINE if online else StateChangeType.OFFLINE)
-        if len(states) > 1 and states[-1] == states[0]:
+        state = StateChangeType.ONLINE if online else StateChangeType.OFFLINE
+        logger.debug("Probe #%s for %s: %s", index + 1, source.name, state.value)
+        states.append(state)
+        if state == StateChangeType.ONLINE:
             break
     timestamp = get_config().now()
-    if len(states) > 1 and states[0] == states[-1]:
+    if len(states) > 0:
         record_state(session, source.id, states[-1], timestamp)
         logger.debug("Source %s is %s", source.name, states[-1].value)
 
@@ -90,7 +92,7 @@ async def main(stop_event=None):
         while not stop_event.is_set():
             await probe_passive_sources()
             try:
-                await asyncio.wait_for(stop_event.wait(), timeout=config.passive_probe_interval)
+                await asyncio.wait_for(stop_event.wait(), timeout=config.passive_probe_delay)
             except asyncio.TimeoutError:
                 pass
         logger.info("Shutdown signal received")

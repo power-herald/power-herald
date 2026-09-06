@@ -139,18 +139,18 @@ class Config:
         return self.get("probing.passive.enabled", True)
 
     @property
-    def passive_probe_interval(self) -> int:
-        return parse_duration(self.get("probing.passive.interval", "30s"), "probing.passive.interval")
+    def passive_probe_delay(self) -> int:
+        return parse_duration(self.get("probing.passive.delay", "30s"), "probing.passive.delay")
 
     @property
     def passive_probe_timeout(self) -> int:
         return parse_duration(self.get("probing.passive.timeout", "2s"), "probing.passive.timeout")
 
     @property
-    def passive_probe_count(self) -> int:
-        count = self.get("probing.passive.probe_count", 3)
+    def passive_retry_count(self) -> int:
+        count = self.get("probing.passive.retry_count", 3)
         if not isinstance(count, int) or count < 1:
-            raise ValueError("probing.passive.probe_count must be a positive integer")
+            raise ValueError("probing.passive.retry_count must be a positive integer")
         return count
 
     @property
@@ -172,12 +172,12 @@ class Config:
     @property
     def active_probe_timeout(self) -> int:
         value = self.get("probing.active.timeout")
-        return self.passive_probe_interval if value is None else parse_duration(value, "probing.active.timeout")
+        return self.passive_probe_delay if value is None else parse_duration(value, "probing.active.timeout")
 
     @property
-    def state_processor_interval(self) -> int:
-        value = self.get("probing.processor.interval")
-        return self.passive_probe_interval if value is None else parse_duration(value, "probing.processor.interval")
+    def state_processor_delay(self) -> int:
+        value = self.get("probing.processor.delay")
+        return self.passive_probe_delay if value is None else parse_duration(value, "probing.processor.delay")
 
     @property
     def notifications_track_outages(self) -> bool:

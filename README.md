@@ -259,7 +259,7 @@ database:
   database: "power_herald"
 
 admin:
-  chat_ids: ["123456789", "987654321"]
+  chat_ids: [123456789, 987654321]
 
 outages:
   gpvs:
