@@ -52,6 +52,9 @@ notification:
     offline_source: "⏱ Для {source_name} раніше світло було (невідомо скільки часу)"
     source_online_duration: "⏱ Для {source_name} світла не було: {duration}"
     source_offline_duration: "⏱ Для {source_name} світло було: {duration}"
+  outage:
+    next_online: "⏭ Наступне планове відновлення:\n🟢 {start}"
+    next_offline: "⏭ Наступне планове відключення:\n🔴 {start}"
 
 schedule:
   outages_today: "🗓 Графік відключень на сьогодні.\n{name}, {date}:\n"

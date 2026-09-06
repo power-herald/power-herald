@@ -166,6 +166,10 @@ class Config:
         return self.get("probing.processor.interval_seconds", self.passive_probe_interval)
 
     @property
+    def notifications_track_outages(self) -> bool:
+        return self.get("notifications.track_outages", True)
+
+    @property
     def outage_json_url(self) -> str:
         return self.get("outages.json_url")
 
