@@ -180,8 +180,8 @@ class Config:
         return self.passive_probe_delay if value is None else parse_duration(value, "probing.processor.delay")
 
     @property
-    def notifications_track_outages(self) -> bool:
-        return self.get("notifications.track_outages", True)
+    def notifications_track_next_scheduled_outage(self) -> bool:
+        return self.get("notifications.track_next_scheduled_outage", True)
 
     @property
     def outage_json_url(self) -> str:

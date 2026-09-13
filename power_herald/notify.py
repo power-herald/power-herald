@@ -28,7 +28,7 @@ def next_outage_message(
     state: StateChangeType,
     timestamp: datetime.datetime,
 ) -> str | None:
-    if not config.notifications_track_outages or (source and source.is_generator):
+    if not config.notifications_track_next_scheduled_outage or (source and source.is_generator):
         return None
 
     outage = session.query(Outage).order_by(Outage.id.desc()).first()

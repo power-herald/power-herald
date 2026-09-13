@@ -39,7 +39,7 @@ probing:
     delay: 20s
 
 notifications:
-  track_outages: true
+  track_next_scheduled_outage: true
 
 outages:
   source: "file"
