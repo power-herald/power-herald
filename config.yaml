@@ -49,6 +49,8 @@ outages:
   schedule_send_time:
     today: "06:00" # Empty string, false, or comment out to disable sending today's outages notification
     tomorrow: "21:00" # Empty string, false, or comment out to disable sending tomorrow's outage notification
+  statistic_send_time:
+    weekly: "10:00" # Empty string, false, or comment out to disable the weekly outage statistics report (sent every Monday)
   gpvs:
     - name: "Kyiv GPV 37.1"
       id: "GPV37.1"

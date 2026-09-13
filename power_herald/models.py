@@ -4,7 +4,7 @@ from __future__ import annotations
 import datetime
 import enum
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Boolean, Text, UniqueConstraint, JSON
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, Integer, String, Boolean, Text, UniqueConstraint, JSON
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -175,3 +175,14 @@ class OutageNotification(Base):
     type: Mapped[OutageNotificationType] = mapped_column(
         Enum(OutageNotificationType), nullable=False
     )
+
+class WeeklyStatisticsNotification(Base):
+    __tablename__ = 'weekly_statistics_notifications'
+    __table_args__ = (UniqueConstraint('source_id', 'week_start'),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_id: Mapped[int] = mapped_column(ForeignKey('power_sources.id'), nullable=False)
+    week_start: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    sent_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    source: Mapped[PowerSource] = relationship()

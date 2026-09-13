@@ -18,6 +18,7 @@ from power_herald.models import (
 )
 from power_herald.outage_data import content_hash, fetch_outage_data, message_hash, prepare_messages
 from power_herald.lifecycle import use_stop_event
+from power_herald.weekly_stats import send_weekly_statistics_once
 
 config = get_config()
 logger = logging.getLogger("schedule")
@@ -185,6 +186,16 @@ async def main(stop_event=None) -> None:
                     )
                 except Exception:
                     logger.exception("Tomorrow's outage schedule send failed")
+
+            # WEEKLY STATISTICS (every Monday)
+            if (config.outage_statistic_send_time_weekly is not None
+                and now.weekday() == 0
+                and now.time() >= config.outage_statistic_send_time_weekly
+            ):
+                try:
+                    await send_weekly_statistics_once(now.date())
+                except Exception:
+                    logger.exception("Weekly outage statistics send failed")
 
             # Wait for the next update or schedule send time
             logger.debug(

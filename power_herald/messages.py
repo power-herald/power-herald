@@ -21,6 +21,10 @@ def _escape_markdown_v2(value: str) -> str:
     )
 
 
+def _escape_markdown_v2_code(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("`", "\\`")
+
+
 def _is_outdated(date: str, end: str, as_of: datetime.datetime) -> bool:
     try:
         period_end = datetime.datetime.fromisoformat(f"{date}T{end}")
@@ -29,13 +33,18 @@ def _is_outdated(date: str, end: str, as_of: datetime.datetime) -> bool:
     return period_end <= as_of.replace(tzinfo=None)
 
 
-def create_message(key: str, **parts: Any) -> str:
-    """Create a complete localized message from a locale key and its pieces."""
+def _locale_value(key: str) -> Any:
     value: Any = _locale
     for part in key.split("."):
         if not isinstance(value, dict) or part not in value:
             raise KeyError(f"Message not found: {key}")
         value = value[part]
+    return value
+
+
+def create_message(key: str, **parts: Any) -> str:
+    """Create a complete localized message from a locale key and its pieces."""
+    value = _locale_value(key)
     if not isinstance(value, str):
         raise TypeError(f"Message is not a string: {key}")
     return value.format(**parts)
@@ -145,3 +154,27 @@ def schedule_message_from_json(
 ) -> str:
     message_date = date or get_config().now().date().isoformat()
     return schedule_message(message_date, message["outages"], message["name"], today=today, as_of=as_of, updated=updated)
+
+
+def weekly_statistics_message(
+    source_name: str,
+    week_start: str,
+    week_end: str,
+    days: list[tuple[list[str], datetime.timedelta]],
+) -> str:
+    weekdays = _locale_value("weekly_stats.weekdays")
+    chart = _locale_value("weekly_stats.chart")
+    lines = [_escape_markdown_v2(get_message("weekly_stats.title", source_name=source_name, week_start=week_start, week_end=week_end))]
+    for index, (blocks, offline_duration) in enumerate(days):
+        total_minutes = int(offline_duration.total_seconds() // 60)
+        duration = f"{total_minutes // 60:02d}:{total_minutes % 60:02d}"
+        line = create_message(
+            "weekly_stats.line",
+            weekday=weekdays[index],
+            begin=chart["begin"],
+            chart="".join(chart[block] for block in blocks),
+            end=chart["end"],
+            duration=duration,
+        )
+        lines.append(f"`{_escape_markdown_v2_code(line)}`")
+    return "\n".join(lines)

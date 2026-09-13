@@ -227,6 +227,18 @@ class Config:
             raise ValueError("outages.schedule_send_time.today must be in HH:MM format") from error
 
     @property
+    def outage_statistic_send_time_weekly(self) -> dt.time | None:
+        value = self.get("outages.statistic_send_time.weekly", "10:00")
+        if (isinstance(value, str) and value == "") or (isinstance(value, bool) and not value):
+            return None
+        if not isinstance(value, str):
+            raise ValueError("outages.statistic_send_time.weekly must be in HH:MM format")
+        try:
+            return dt.datetime.strptime(value, "%H:%M").time()
+        except ValueError as error:
+            raise ValueError("outages.statistic_send_time.weekly must be in HH:MM format") from error
+
+    @property
     def gpvs(self) -> list[dict[str, str]]:
         value = self.get("outages.gpvs", [])
         if not isinstance(value, list):
