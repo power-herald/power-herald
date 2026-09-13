@@ -154,3 +154,14 @@ CREATE TABLE IF NOT EXISTS outage_notifications (
     type ENUM('TODAY', 'TOMORROW') NOT NULL,
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS weekly_statistics_notifications (
+    id INT NOT NULL AUTO_INCREMENT,
+    source_id INT NOT NULL,
+    week_start DATE NOT NULL,
+    sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_weekly_statistics_notifications (source_id, week_start),
+    CONSTRAINT fk_weekly_statistics_notifications_source
+        FOREIGN KEY (source_id) REFERENCES power_sources (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
