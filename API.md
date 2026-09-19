@@ -167,6 +167,32 @@ Toggle maintenance mode for a source or globally. When enabled, probes and notif
 🟢 18:30 - 24:00
 ```
 
+### Weekly Outage Statistics
+
+The bot sends weekly statistics on Monday at the configured time. The default
+is `10:00`; configure it with `outages.statistic_send_time.weekly`, or set the
+value to an empty string or `false` to disable the report.
+
+Statistics cover the previous Monday through Sunday and are calculated from
+the `periods` table for each enabled, subscribed power source. Each line uses
+Markdown code formatting and represents one weekday:
+
+```
+Пн: ▕█  ██░██████▏ 04:30
+Вт: ▕█  ░░ ██░███▏ 07:30
+Ср: ▕████████████▏ 00:00
+Чт: ▕████  ░░  ██▏ 08:30
+Пт: ▕████████████▏ 00:00
+Сб: ▕██████  ████▏ 04:00
+Нд: ▕████████████▏ 00:00
+```
+
+Each chart square represents two hours. `█` indicates online, a blank square
+indicates offline, and `░` indicates that both online and offline periods
+occurred during the same two-hour block. The value at the end of each line is
+that weekday's total outage time in `hh:mm` format. Chart labels and characters
+are localized in the `weekly_stats` section of `locale.yaml`.
+
 ---
 
 ## Error Codes

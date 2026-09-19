@@ -42,6 +42,7 @@ placeholder names intact when customizing a message.
 - **Per-chat subscriptions**: Different buildings/groups can subscribe to specific power sources
 - **Admin controls**: Manual activation approval, maintenance mode management, generator event configuration
 - **Scheduled outages**: Daily posting of outage schedules (third-party source, aggregated from Yasno/DTEK)
+- **Weekly outage statistics**: Monday reports based on recorded `periods`, with two-hour power-state charts and weekly outage totals
 - **Database persistence**: ORM-based MariaDB/MySQL or SQLite storage of state changes, outages, and subscriptions
 - **OpenRC integration**: Systemd-free daemon management for Gentoo Linux
 - **Webhook-based**: No long polling; efficient webhook integration with Telegram
@@ -62,7 +63,8 @@ placeholder names intact when customizing a message.
 │   ├── outage_data.py      # Third-party source of outage schedule retrieving and parsing
 │   ├── outage_periods.py   # Outage period tracking & duration calculation
 │   ├── maintenance.py      # Maintenance mode management
-│   ├── schedule.py         # Outage schedule notifications (from-today-for-today, from-today-for-tomorrow)
+│   ├── schedule.py         # Outage schedule notifications (today, tomorrow, and weekly statistics)
+│   ├── weekly_stats.py     # Previous-week outage statistics and two-hour charts
 │   ├── cli.py              # Console management client application for database entities
 │   ├── server.py           # All-in-one daemon to run separated modules
 │   ├── lifecycle.py        # Daemon utils
@@ -346,6 +348,7 @@ entry points, for example `venv/bin/python -m power_herald.bot` or
 - `active_sources` - Optional active-probe secrets mapped to power sources
 - `state_changes` - State transitions (online/offline)
 - `periods` - Online/offline source state periods with start/stop timestamps
+- `weekly_statistics_notifications` - Deduplication records for weekly statistics reports
 - `chats` - Telegram chats subscribed to service
 - `subscriptions` - Chat-to-source mappings
 - `maintenance_modes` - Global or per-source maintenance toggles
@@ -367,6 +370,18 @@ formatting untrusted values into a statement.
 1. Bot detects line is offline
 2. Notification: "Line A: OFFLINE\nPrevious period: 2:15:30"
 3. (Optional) Daily schedule posted at 07:00
+4. (Optional) Weekly statistics posted on Monday at the configured time
+
+### Weekly Outage Statistics
+
+The weekly report covers the previous Monday through Sunday and is calculated
+from the `periods` table. It contains one line for each weekday. Each chart
+character represents two hours: `█` means online, a blank means offline, and
+`░` means both states occurred during that two-hour block. Every line ends with
+the total outage duration for that day in `hh:mm` format.
+
+Configure the send time with `outages.statistic_send_time.weekly`; it defaults
+to Monday at `10:00`. Set it to an empty string or `false` to disable the report.
 
 ### Example 2: Generator Activation
 1. An activated chat presses `Start Generator`
@@ -412,7 +427,7 @@ formatting untrusted values into a statement.
 
 - [ ] Web dashboard for status monitoring
 - [ ] Telegram inline keyboards for quick actions
-- [ ] Historical stats and analytics notifications
+- [x] Historical stats and analytics notifications
 - [ ] Other messangers integration
 - [ ] Email fallback notifications
 - [x] Docker image

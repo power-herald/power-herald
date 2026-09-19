@@ -29,6 +29,9 @@ from power_herald.models import (
     StateChange,
     StateChangeType,
     Subscription,
+    OutageNotification,
+    OutageNotificationType,
+    WeeklyStatisticsNotification,
 )
 
 
@@ -123,6 +126,20 @@ def build_parser() -> argparse.ArgumentParser:
         listing.add_argument("--from", dest="from_time", type=parse_datetime)
         listing.add_argument("--to", dest="to_time", type=parse_datetime)
         listing.add_argument("--json", action="store_true")
+
+    notifications = commands.add_parser("outage-notifications", help="list today/tomorrow outage notifications")
+    notifications.add_argument("--type", type=lambda value: enum_value(OutageNotificationType, value))
+    notifications.add_argument("--from", dest="from_time", type=parse_datetime)
+    notifications.add_argument("--to", dest="to_time", type=parse_datetime)
+    notifications.add_argument("--json", action="store_true")
+
+    weekly_notifications = commands.add_parser(
+        "weekly-notifications", help="list weekly outage statistics notifications"
+    )
+    weekly_notifications.add_argument("--source-id", type=int)
+    weekly_notifications.add_argument("--from", dest="from_time", type=parse_datetime)
+    weekly_notifications.add_argument("--to", dest="to_time", type=parse_datetime)
+    weekly_notifications.add_argument("--json", action="store_true")
 
     return parser
 
@@ -233,6 +250,20 @@ def list_history(session: Session, model: Any, arguments: argparse.Namespace) ->
     return query.order_by(time_column.desc(), model.id.desc()).all()
 
 
+def list_notifications(session: Session, model: Any, arguments: argparse.Namespace) -> list[Any]:
+    query = session.query(model)
+    if model is OutageNotification and arguments.type is not None:
+        query = query.filter(model.type == arguments.type)
+    if hasattr(arguments, "source_id") and arguments.source_id is not None:
+        query = query.filter(model.source_id == arguments.source_id)
+    time_column = OutageNotification.posted_at if model is OutageNotification else WeeklyStatisticsNotification.sent_at
+    if arguments.from_time is not None:
+        query = query.filter(time_column >= arguments.from_time)
+    if arguments.to_time is not None:
+        query = query.filter(time_column <= arguments.to_time)
+    return query.order_by(time_column.desc(), model.id.desc()).all()
+
+
 def run(arguments: argparse.Namespace) -> int:
     db_url = arguments.db_url
     engine_options = {}
@@ -279,9 +310,14 @@ def run(arguments: argparse.Namespace) -> int:
                 session.commit()
                 print(f"Removed {arguments.command} record {arguments.id}.")
         else:
-            model = {"power-states": SourceState, "state-changes": StateChange,
-                     "outage-periods": Period}[arguments.command]
-            output(list_history(session, model, arguments), arguments.json)
+            history_models = {"power-states": SourceState, "state-changes": StateChange,
+                              "outage-periods": Period}
+            notification_models = {"outage-notifications": OutageNotification,
+                                   "weekly-notifications": WeeklyStatisticsNotification}
+            if arguments.command in history_models:
+                output(list_history(session, history_models[arguments.command], arguments), arguments.json)
+            else:
+                output(list_notifications(session, notification_models[arguments.command], arguments), arguments.json)
     return 0
 
 
