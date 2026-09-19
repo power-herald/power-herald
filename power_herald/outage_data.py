@@ -95,6 +95,8 @@ def prepare_messages(
             "time_zone": preset.get("time_zone") or {},
         }
         periods = _periods_for_day(schedule, weekday)
+        if periods == [("online", "00:00", "24:00")]:
+            periods = []
         messages[gpv["name"]] = {
             "name": gpv["name"],
             "outages": [
@@ -107,6 +109,14 @@ def prepare_messages(
             ],
         }
     return messages
+
+
+def has_offline_periods(messages: dict[str, dict[str, Any]]) -> bool:
+    return any(
+        outage.get("status") == "offline"
+        for message in messages.values()
+        for outage in message.get("outages", [])
+    )
 
 
 def message_hash(message: dict[str, Any]) -> str:

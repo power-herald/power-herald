@@ -16,7 +16,13 @@ from power_herald.models import (
     OutageNotification,
     OutageNotificationType,
 )
-from power_herald.outage_data import content_hash, fetch_outage_data, message_hash, prepare_messages
+from power_herald.outage_data import (
+    content_hash,
+    fetch_outage_data,
+    has_offline_periods,
+    message_hash,
+    prepare_messages,
+)
 from power_herald.lifecycle import use_stop_event
 from power_herald.weekly_stats import send_weekly_statistics_once
 
@@ -90,11 +96,14 @@ async def send_schedule_once(
         if latest is None:
             logger.info("No outage data available; skipping %s outage schedule", notification_type.value)
             return False
-        messages = list(prepare_messages(latest.json, config.gpvs, today=target_date).values())
+        messages = prepare_messages(latest.json, config.gpvs, today=target_date)
+        if notification_type is OutageNotificationType.TOMORROW and not has_offline_periods(messages):
+            logger.info("No offline periods in tomorrow's outage data; skipping outage schedule")
+            return False
 
     await send_messages(
         config.bot_token,
-        messages,
+        list(messages.values()),
         today=notification_type is OutageNotificationType.TODAY,
         date=target_date,
     )
