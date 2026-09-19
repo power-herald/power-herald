@@ -85,9 +85,11 @@ async def probe_passive_sources():
         session.close()
 
 
-async def main(stop_event=None):
+async def main(stop_event=None, ready_event=None):
     stop_event = use_stop_event(stop_event)
     logger.info("Passive probe started")
+    if ready_event is not None:
+        ready_event.set()
     try:
         while not stop_event.is_set():
             await probe_passive_sources()

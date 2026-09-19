@@ -46,7 +46,10 @@ sudo -e /etc/power-herald/config.yaml
 ```
 
 3. Review `/etc/conf.d/power-herald` if you need to change the user, group,
-   log files, or pidfile used by the init script.
+   log files, or pidfile used by the init script. `PH_READY_TIMEOUT` controls
+   how long `rc-service power-herald start` waits for the daemon to finish
+   its startup sequence (setting the Telegram webhook, configuring bot
+   commands, etc.) before reporting the service as started.
 
 4. Enable and start the service:
 ```bash

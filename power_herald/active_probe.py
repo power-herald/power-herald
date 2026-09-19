@@ -72,7 +72,7 @@ def create_app():
     app.router.add_post(config.active_probe_endpoint, handle_active_ping)
     return app
 
-async def main(stop_event=None):
+async def main(stop_event=None, ready_event=None):
     stop_event = use_stop_event(stop_event)
 
     app = create_app()
@@ -82,6 +82,8 @@ async def main(stop_event=None):
     try:
         await site.start()
         logger.info("Active probe started on %s:%d", config.active_probe_address, config.active_probe_port)
+        if ready_event is not None:
+            ready_event.set()
         await stop_event.wait()
         logger.info("Shutdown signal received")
     finally:

@@ -88,7 +88,7 @@ async def on_shutdown(app):
     await bot.delete_webhook()
     logger.info("Webhook deleted")
 
-async def main(stop_event=None):
+async def main(stop_event=None, ready_event=None):
     stop_event = use_stop_event(stop_event)
     logger.info("Bot webhook server starting on %s:%s%s", config.webhook_address, config.webhook_port, config.webhook_path)
     logger.info("Bot webhook URL: %s", config.webhook_url)
@@ -103,6 +103,8 @@ async def main(stop_event=None):
     try:
         await site.start()
         logger.info("Bot webhook server started.")
+        if ready_event is not None:
+            ready_event.set()
         await stop_event.wait()
         logger.info("Shutdown signal received")
     finally:
