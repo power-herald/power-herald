@@ -178,13 +178,13 @@ the `periods` table for each enabled, subscribed power source. Each line uses
 Markdown code formatting and represents one weekday:
 
 ```
-Пн: ▕█  ██░██████▏ 04:30
-Вт: ▕█  ░░ ██░███▏ 07:30
-Ср: ▕████████████▏ 00:00
-Чт: ▕████  ░░  ██▏ 08:30
-Пт: ▕████████████▏ 00:00
-Сб: ▕██████  ████▏ 04:00
-Нд: ▕████████████▏ 00:00
+Пн▕█  ██░██████▏04:30
+Вт▕█  ░░ ██░███▏07:30
+Ср▕████████████▏00:00
+Чт▕████  ░░  ██▏08:30
+Пт▕████████████▏00:00
+Сб▕██████  ████▏04:00
+Нд▕████████████▏00:00
 ```
 
 Each chart square represents two hours. `█` indicates online, a blank square

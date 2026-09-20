@@ -66,7 +66,7 @@ schedule:
   no_outages_tomorrow: "❎ Без відключень на завтра.\n{name}, {date}."
 
 weekly_stats:
-  title: "📊 Тижневий звіт для {source_name}, {week_start} - {week_end}:\n"
+  title: "📊 Тижневий звіт для {source_name}, {week_start} - {week_end}, загальний час відключень:\n"
   weekdays: ["Пн", "Вв", "Ср", "Чт", "Пт", "Сб", "Нд"]
   chart:
     online: "█"
@@ -74,4 +74,4 @@ weekly_stats:
     mixed: "░"
     begin: "▕"
     end: "▏"
-  line: "{weekday}: {begin}{chart}{end} {duration}"
+  line: "{weekday}{begin}{chart}{end}{duration}"
