@@ -97,8 +97,8 @@ async def send_schedule_once(
             logger.info("No outage data available; skipping %s outage schedule", notification_type.value)
             return False
         messages = prepare_messages(latest.json, config.gpvs, today=target_date)
-        if notification_type is OutageNotificationType.TOMORROW and not has_offline_periods(messages):
-            logger.info("No offline periods in tomorrow's outage data; skipping outage schedule")
+        if notification_type is OutageNotificationType.TODAY and not has_offline_periods(messages):
+            logger.info("No offline periods in today's outage data; skipping outage schedule")
             return False
 
     await send_messages(
