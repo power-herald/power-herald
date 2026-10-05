@@ -53,6 +53,29 @@ def create_message(key: str, **parts: Any) -> str:
 get_message = create_message
 
 
+def format_date(value: datetime.date | str) -> str:
+    if isinstance(value, str):
+        value = datetime.date.fromisoformat(value)
+    return create_message("date", day=f"{value.day:02d}", month=f"{value.month:02d}", year=value.year)
+
+
+def format_clock(value: str) -> str:
+    hours, minutes = value.split(":")[:2]
+    return create_message("time.short.without_days", hours=f"{int(hours):02d}", minutes=f"{int(minutes):02d}")
+
+
+def format_duration(value: datetime.timedelta, style: str = "long") -> str:
+    total_minutes = int(value.total_seconds() // 60)
+    days = 0
+    if value > datetime.timedelta(days=1):
+        days, total_minutes = divmod(total_minutes, 24 * 60)
+    hours, minutes = divmod(total_minutes, 60)
+    key = f"time.{style}.{'with_days' if days else 'without_days'}"
+    if style == "short":
+        return create_message(key, days=days, hours=f"{hours:02d}", minutes=f"{minutes:02d}")
+    return create_message(key, days=days, hours=hours, minutes=minutes)
+
+
 def bot_greeting(chat_id: int, thread_id: int | None) -> str:
     return get_message("bot.greeting", chat_id=chat_id, thread_id=thread_id)
 
@@ -69,7 +92,7 @@ def state_change_message(
     if duration:
         parts.append("")
         duration_key = f"notification.source.{state_key}_duration"
-        parts.append(get_message(duration_key, duration=str(duration).split(".")[0]))
+        parts.append(get_message(duration_key, duration=format_duration(duration)))
     return "\n".join(parts)
 
 
@@ -87,11 +110,15 @@ def generator_state_change_message(
     if duration and state_key == "offline":
         parts.append("")
         duration_key = f"notification.generator.{state_key}_duration"
-        parts.append(get_message(duration_key, duration=str(duration).split(".")[0]))
+        parts.append(get_message(duration_key, duration=format_duration(duration)))
     if maintenance_window:
-        parts.append(get_message("notification.generator.maintenance_window", start=maintenance_window[0], end=maintenance_window[1]))
+        parts.append(get_message(
+            "notification.generator.maintenance_window",
+            start=format_clock(maintenance_window[0]),
+            end=format_clock(maintenance_window[1]),
+        ))
     if next_working_window:
-        parts.append(get_message("notification.generator.next_working_window", start=next_working_window))
+        parts.append(get_message("notification.generator.next_working_window", start=format_clock(next_working_window)))
     return "\n".join(parts)
 
 
@@ -107,7 +134,7 @@ def group_state_change_message(
     for source_name, duration in source_durations:
         if duration:
             message_key = f"notification.group.source_{state_key}_duration"
-            parts.append(get_message(message_key, source_name=source_name, duration=str(duration).split(".")[0]))
+            parts.append(get_message(message_key, source_name=source_name, duration=format_duration(duration)))
         else:
             message_key = f"notification.group.{state_key}_source"
             parts.append(get_message(message_key, source_name=source_name))
@@ -127,15 +154,15 @@ def schedule_message(
     empty_key = "schedule.no_outages_today" if today else "schedule.no_outages_tomorrow"
     as_of = as_of or get_config().now()
     if not outages:
-        return _escape_markdown_v2(get_message(empty_key, date=date, name=name))
+        return _escape_markdown_v2(get_message(empty_key, date=format_date(date), name=name))
 
-    lines = [_escape_markdown_v2(get_message(title_key, date=date, name=name))]
+    lines = [_escape_markdown_v2(get_message(title_key, date=format_date(date), name=name))]
     for outage in outages:
         line = _escape_markdown_v2(
             get_message(
                 f"schedule.outage_period_{outage.get('status', 'offline')}",
-                start=outage["start"],
-                end=outage["end"],
+                start=format_clock(outage["start"]),
+                end=format_clock(outage["end"]),
             )
         )
         if _is_outdated(date, outage["end"], as_of):
@@ -164,10 +191,14 @@ def weekly_statistics_message(
 ) -> str:
     weekdays = _locale_value("weekly_stats.weekdays")
     chart = _locale_value("weekly_stats.chart")
-    lines = [_escape_markdown_v2(get_message("weekly_stats.title", source_name=source_name, week_start=week_start, week_end=week_end))]
+    lines = [_escape_markdown_v2(get_message(
+        "weekly_stats.title",
+        source_name=source_name,
+        week_start=format_date(week_start),
+        week_end=format_date(week_end),
+    ))]
     for index, (blocks, offline_duration) in enumerate(days):
-        total_minutes = int(offline_duration.total_seconds() // 60)
-        duration = f"{total_minutes // 60:02d}:{total_minutes % 60:02d}"
+        duration = format_duration(offline_duration, "short")
         line = create_message(
             "weekly_stats.line",
             weekday=weekdays[index],

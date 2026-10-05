@@ -26,6 +26,16 @@ admin:
   maintenance_status: "Maintenance {status} for {scope}."
   generator_status: "⚠️ Generator notifications for {source_name} set to {status}."
 
+date: "{day}.{month}.{year}"
+
+time:
+  long:
+    with_days: "{days} дн. {hours} год. {minutes} хв."
+    without_days: "{hours} год. {minutes} хв."
+  short:
+    with_days: "{days}.{hours}:{minutes}"
+    without_days: "{hours}:{minutes}"
+
 generator:
   start_button: "▶ Генератор запущено"
   stop_button: "⏹ Генератор зупинено"
@@ -50,8 +60,8 @@ notification:
     offline: "❌ Електропостачання перервано для {group_name}\n" # {group_description}
     online_source: "⏱ Для {source_name} раніше світла не було (невідомо скільки часу)"
     offline_source: "⏱ Для {source_name} раніше світло було (невідомо скільки часу)"
-    source_online_duration: "⏱ Для {source_name} світла не було: {duration}"
-    source_offline_duration: "⏱ Для {source_name} світло було: {duration}"
+    source_online_duration: "⏱ {source_name} - світла не було: {duration}"
+    source_offline_duration: "⏱ {source_name} - світло було: {duration}"
   outage:
     next_online: "⏭ Наступне планове відновлення:\n🟢 {start}"
     next_offline: "⏭ Наступне планове відключення:\n🔴 {start}"
@@ -66,7 +76,7 @@ schedule:
   no_outages_tomorrow: "❎ Без відключень на завтра.\n{name}, {date}."
 
 weekly_stats:
-  title: "📊 Тижневий звіт для {source_name}, {week_start} - {week_end}, загальний час відключень:\n"
+  title: "📊 Тижневий звіт для {source_name}, {week_start} - {week_end}, час відключень по дням:\n"
   weekdays: ["Пн", "Вв", "Ср", "Чт", "Пт", "Сб", "Нд"]
   chart:
     online: "█"

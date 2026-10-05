@@ -8,7 +8,13 @@ from power_herald.models import Chat, Outage, Period, PowerGroup, PowerSource, S
 import os
 import datetime
 from power_herald.config import get_config
-from power_herald.messages import generator_state_change_message, get_message, group_state_change_message, state_change_message
+from power_herald.messages import (
+    format_clock,
+    generator_state_change_message,
+    get_message,
+    group_state_change_message,
+    state_change_message,
+)
 
 config = get_config()
 logger = logging.getLogger("notifier")
@@ -46,7 +52,7 @@ def next_outage_message(
             continue
         start = datetime.datetime.combine(timestamp.date(), start_time, tzinfo=config.timezone)
         if start > timestamp:
-            return get_message(f"notification.outage.next_{next_state.value}", start=period["start"])
+            return get_message(f"notification.outage.next_{next_state.value}", start=format_clock(period["start"]))
     return None
 
 
