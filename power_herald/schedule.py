@@ -1,6 +1,7 @@
 import asyncio
 import datetime as dt
 import logging
+import math
 
 from aiogram import Bot
 from sqlalchemy import create_engine
@@ -233,7 +234,7 @@ async def main(stop_event=None, ready_event=None) -> None:
             )
             wait_seconds = config.outage_update_delay if next_schedule is None else min(
                 config.outage_update_delay,
-                max(1, int((next_schedule - now).total_seconds())),
+                max(1, math.ceil((next_schedule - now).total_seconds()) + 1),
             )
             try:
                 await asyncio.wait_for(
