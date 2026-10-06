@@ -16,6 +16,7 @@ admin:
     no_chats: "No chats found."
     generator_private_only: "Generator control is available only in private chats."
     generator_not_found: "Generator source not found."
+    schedule_update_failed: "Failed to update the outage schedule."
   activation_requested: "Activation requested for chat [{chat_id}] {title} for source [{source_id}] {source_name}."
   activation_request_sent: "Activation request sent to admin."
   chat_activated: "Chat [{chat_id}] {title} activated."
@@ -24,6 +25,7 @@ admin:
   source_list_item: "{source_id}: {source_name} ({source_type}, {status})"
   chat_list_item: "{chat_id}: {title} ({status})"
   maintenance_status: "Maintenance {status} for {scope}."
+  schedule_update_completed: "Outage schedule update completed."
   generator_status: "⚠️ Generator notifications for {source_name} set to {status}."
 
 date: "{day}.{month}.{year}"

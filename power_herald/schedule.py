@@ -30,7 +30,7 @@ from power_herald.weekly_stats import send_weekly_statistics_once
 config = get_config()
 logger = logging.getLogger("schedule")
 
-async def update_once() -> bool:
+async def update_once(force: bool = False) -> bool:
     logger.info("Starting outage schedule update from %s", config.outage_data_source)
     engine = create_engine(config.db_url, **config.db_engine_options)
     Base.metadata.create_all(engine)
@@ -62,12 +62,14 @@ async def update_once() -> bool:
             current_message_hash = message_hash(message)
             latest = session.query(Outage).filter_by(name=name).order_by(Outage.id.desc()).first()
             if latest and latest.message_hash == current_message_hash:
-                continue
-            session.add(Outage(name=name, message_hash=current_message_hash, message=message))
+                if not force:
+                    continue
+            else:
+                session.add(Outage(name=name, message_hash=current_message_hash, message=message))
             changed_messages.append(message)
         session.commit()
         logger.info(
-            "Stored outage data for %s groups: %s outage periods, %s changed messages",
+            "Stored outage data for %s groups: %s outage periods, %s messages to send",
             prepared_count,
             outage_count,
             len(changed_messages),

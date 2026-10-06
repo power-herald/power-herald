@@ -307,6 +307,28 @@ async def maintenance_cmd(message: types.Message):
     )
     await message.answer(response_message)
 
+
+@router.message(Command("publish_schedule"))
+async def publish_schedule_cmd(message: types.Message):
+    _log_command(message, "/publish_schedule")
+    if str(message.chat.id) not in config.admin_chat_ids:
+        _log_command_warning(message, "/publish_schedule", "not authorized")
+        await message.answer(get_message("admin.error.not_authorized"))
+        return
+
+    from power_herald.schedule import update_once
+
+    try:
+        await update_once(force=True)
+    except Exception:
+        logger.exception("Manual outage schedule update failed")
+        _log_command_warning(message, "/publish_schedule", "schedule update failed")
+        await message.answer(get_message("admin.error.schedule_update_failed"))
+        return
+
+    await message.answer(get_message("admin.schedule_update_completed"))
+
+
 @router.message(Command("generator"))
 async def generator_cmd(message: types.Message):
     _log_command(message, "/generator")

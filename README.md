@@ -281,6 +281,7 @@ See `config.yaml` for all available options.
 - `/activate` - Request chat activation (notifies admin)
 - `/approve <chat_id>` - Approve chat activation (admin only)
 - `/maintenance <source_id|global> <on|off> [comment]` - Toggle maintenance mode
+- `/publish_schedule` - Publish the current outage schedule now (admin only)
 - `Start Generator` / `Stop Generator` - Control the generator from an activated chat
 
 ### Power Source Types
