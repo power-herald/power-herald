@@ -56,7 +56,7 @@ async def update_once(force: bool = False) -> bool:
         outage_count = 0
         for name, message in prepare_messages(data, config.gpvs).items():
             prepared_count += 1
-            if not message["outages"]:
+            if message["outages"] is None:
                 continue
             outage_count += len(message["outages"])
             current_message_hash = message_hash(message)
