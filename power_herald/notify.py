@@ -37,11 +37,15 @@ def next_outage_message(
     if not config.notifications_track_next_scheduled_outage or (source and source.is_generator):
         return None
 
-    outage = session.query(Outage).order_by(Outage.id.desc()).first()
+    timestamp = timestamp.astimezone(config.timezone) if timestamp.tzinfo else timestamp.replace(tzinfo=config.timezone)
+    outage = (
+        session.query(Outage)
+        .filter_by(schedule_for=timestamp.date())
+        .order_by(Outage.id.desc())
+        .first()
+    )
     if outage is None:
         return None
-
-    timestamp = timestamp.astimezone(config.timezone) if timestamp.tzinfo else timestamp.replace(tzinfo=config.timezone)
     next_state = StateChangeType.ONLINE if state == StateChangeType.OFFLINE else StateChangeType.OFFLINE
     for period in outage.message.get("outages", []):
         if period.get("status") != next_state.value:
