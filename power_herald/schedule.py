@@ -46,9 +46,7 @@ async def update_once(force: bool = False) -> bool:
             previous.json = data
         elif previous:
             logger.info("Outage data content changed")
-            previous.last_updated_at = config.now()
-            previous.content_hash = current_hash
-            previous.json = data
+            session.add(OutageData(content_hash=current_hash, json=data))
         else:
             logger.info("No previous outage data found; creating initial record")
             session.add(OutageData(content_hash=current_hash, json=data))
