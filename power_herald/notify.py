@@ -8,6 +8,7 @@ from power_herald.models import Chat, Outage, Period, PowerGroup, PowerSource, S
 import os
 import datetime
 from power_herald.config import get_config
+from power_herald.outage_data import day_outages
 from power_herald.messages import (
     format_clock,
     generator_state_change_message,
@@ -38,16 +39,11 @@ def next_outage_message(
         return None
 
     timestamp = timestamp.astimezone(config.timezone) if timestamp.tzinfo else timestamp.replace(tzinfo=config.timezone)
-    outage = (
-        session.query(Outage)
-        .filter_by(schedule_for=timestamp.date())
-        .order_by(Outage.id.desc())
-        .first()
-    )
+    outage = session.query(Outage).order_by(Outage.id.desc()).first()
     if outage is None:
         return None
     next_state = StateChangeType.ONLINE if state == StateChangeType.OFFLINE else StateChangeType.OFFLINE
-    for period in outage.message.get("outages", []):
+    for period in day_outages(outage.message, timestamp.date()):
         if period.get("status") != next_state.value:
             continue
         try:

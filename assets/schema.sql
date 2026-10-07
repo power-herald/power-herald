@@ -142,7 +142,6 @@ CREATE TABLE IF NOT EXISTS outages (
     id INT NOT NULL AUTO_INCREMENT,
     name VARCHAR(128) NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    schedule_for DATE NOT NULL,
     message_hash VARCHAR(64) NOT NULL,
     message JSON NOT NULL,
     PRIMARY KEY (id),

@@ -19,6 +19,7 @@ from power_herald.models import (
 )
 from power_herald.outage_data import (
     content_hash,
+    day_outages,
     fetch_outage_data,
     has_offline_periods,
     message_hash,
@@ -53,35 +54,17 @@ async def update_once(force: bool = False) -> bool:
         prepared_count = 0
         outage_count = 0
         today = config.now().date()
-        for schedule_for in (today, today + dt.timedelta(days=1)):
-            for name, message in prepare_messages(data, config.gpvs, today=schedule_for).items():
-                if message["outages"] is None:
+        for name, message in prepare_messages(data, config.gpvs).items():
+            prepared_count += 1
+            outage_count += len(day_outages(message, today))
+            current_message_hash = message_hash(message)
+            latest = session.query(Outage).filter_by(name=name).order_by(Outage.id.desc()).first()
+            if latest and latest.message_hash == current_message_hash:
+                if not force:
                     continue
-                if schedule_for == today:
-                    prepared_count += 1
-                    outage_count += len(message["outages"])
-                current_message_hash = message_hash(message)
-                latest = (
-                    session.query(Outage)
-                    .filter_by(name=name, schedule_for=schedule_for)
-                    .order_by(Outage.id.desc())
-                    .first()
-                )
-                if latest and latest.message_hash == current_message_hash:
-                    if not force or schedule_for != today:
-                        continue
-                else:
-                    session.add(
-                        Outage(
-                            name=name,
-                            schedule_for=schedule_for,
-                            message_hash=current_message_hash,
-                            message=message,
-                        )
-                    )
-                    if schedule_for != today:
-                        continue
-                changed_messages.append(message)
+            else:
+                session.add(Outage(name=name, message_hash=current_message_hash, message=message))
+            changed_messages.append(message)
         session.commit()
         logger.info(
             "Stored outage data for %s groups: %s outage periods, %s messages to send",
@@ -114,17 +97,8 @@ async def send_schedule_once(
         if latest is None:
             logger.info("No outage data available; skipping %s outage schedule", notification_type.value)
             return False
-        messages = prepare_messages(latest.json, config.gpvs, today=target_date)
-        for name in messages:
-            stored = (
-                session.query(Outage)
-                .filter_by(name=name, schedule_for=target_date)
-                .order_by(Outage.id.desc())
-                .first()
-            )
-            if stored is not None:
-                messages[name] = stored.message
-        if notification_type is OutageNotificationType.TODAY and not has_offline_periods(messages):
+        messages = prepare_messages(latest.json, config.gpvs)
+        if notification_type is OutageNotificationType.TODAY and not has_offline_periods(messages, target_date):
             logger.info("No offline periods in today's outage data; skipping outage schedule")
             return False
 

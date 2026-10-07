@@ -5,6 +5,7 @@ from typing import Any
 import yaml
 
 from power_herald.config import get_config
+from power_herald.outage_data import day_outages
 
 def _load_locale() -> dict[str, Any]:
     locale_path = Path(get_config().locale_file)
@@ -180,7 +181,8 @@ def schedule_message_from_json(
     date: str | None = None,
 ) -> str:
     message_date = date or get_config().now().date().isoformat()
-    return schedule_message(message_date, message["outages"], message["name"], today=today, as_of=as_of, updated=updated)
+    outages = day_outages(message, datetime.date.fromisoformat(message_date))
+    return schedule_message(message_date, outages, message["name"], today=today, as_of=as_of, updated=updated)
 
 
 def weekly_statistics_message(

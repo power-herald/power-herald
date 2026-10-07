@@ -80,42 +80,46 @@ def _periods_for_day(schedule: dict[str, Any], weekday: str) -> list[tuple[str, 
     return grouped
 
 
-def prepare_messages(
-    data: dict[str, Any], gpvs: list[dict[str, str]], today: dt.date | None = None
-) -> dict[str, dict[str, Any]]:
+WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+
+
+def weekday_key(date: dt.date) -> str:
+    return WEEKDAYS[date.weekday()]
+
+
+def day_outages(message: dict[str, Any], date: dt.date) -> list[dict[str, Any]]:
+    return message.get(weekday_key(date)) or []
+
+
+def prepare_messages(data: dict[str, Any], gpvs: list[dict[str, str]]) -> dict[str, dict[str, Any]]:
     preset = data.get("preset") or {}
     fact = (data.get("fact") or {}).get("data", {})
     merged = merge_data(preset.get("data") or {}, fact)
-    selected_date = today or get_config().now().date()
-    weekday = str(selected_date.isoweekday())
+    time_zone = preset.get("time_zone") or {}
     messages: dict[str, dict[str, Any]] = {}
     for gpv in gpvs:
-        schedule = {
-            "data": {weekday: merged.get(gpv["id"], {}).get(weekday, {})},
-            "time_zone": preset.get("time_zone") or {},
-        }
-        periods = _periods_for_day(schedule, weekday)
-        if periods == [("online", "00:00", "24:00")]:
-            periods = []
-        messages[gpv["name"]] = {
-            "name": gpv["name"],
-            "outages": [
-                {
-                    "start": start,
-                    "end": end,
-                    "status": state,
-                }
-                for state, start, end in periods
-            ],
-        }
+        message: dict[str, Any] = {"name": gpv["name"]}
+        for index, weekday_name in enumerate(WEEKDAYS, start=1):
+            weekday = str(index)
+            schedule = {
+                "data": {weekday: merged.get(gpv["id"], {}).get(weekday, {})},
+                "time_zone": time_zone,
+            }
+            periods = _periods_for_day(schedule, weekday)
+            if periods == [("online", "00:00", "24:00")]:
+                periods = []
+            message[weekday_name] = [
+                {"start": start, "end": end, "status": state} for state, start, end in periods
+            ]
+        messages[gpv["name"]] = message
     return messages
 
 
-def has_offline_periods(messages: dict[str, dict[str, Any]]) -> bool:
+def has_offline_periods(messages: dict[str, dict[str, Any]], date: dt.date) -> bool:
     return any(
         outage.get("status") == "offline"
         for message in messages.values()
-        for outage in message.get("outages", [])
+        for outage in day_outages(message, date)
     )
 
 
