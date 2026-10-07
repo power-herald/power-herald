@@ -40,18 +40,26 @@ def content_hash(data: dict[str, Any]) -> str:
 
 
 def merge_data(preset: dict[str, Any], fact: Any) -> dict[str, Any]:
+    """Overlay per-date fact data (keyed by unix timestamp) onto preset data keyed by weekday."""
     result = copy.deepcopy(preset)
     if not isinstance(fact, dict):
         return result
-    for gpv_id, weekdays in fact.items():
-        if not isinstance(weekdays, dict):
+    timezone = get_config().timezone
+    for timestamp, gpv_hours in fact.items():
+        if not isinstance(gpv_hours, dict):
             continue
-        target = result.setdefault(gpv_id, {})
-        if not isinstance(target, dict):
-            result[gpv_id] = target = {}
-        for weekday, hours in weekdays.items():
-            if isinstance(hours, dict):
-                target.setdefault(weekday, {}).update(hours)
+        try:
+            date = dt.datetime.fromtimestamp(int(timestamp), timezone).date()
+        except (ValueError, OverflowError, OSError):
+            continue
+        weekday = str(date.weekday() + 1)
+        for gpv_id, hours in gpv_hours.items():
+            if not isinstance(hours, dict):
+                continue
+            target = result.setdefault(gpv_id, {})
+            if not isinstance(target, dict):
+                result[gpv_id] = target = {}
+            target.setdefault(weekday, {}).update(hours)
     return result
 
 
