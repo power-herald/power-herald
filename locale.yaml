@@ -72,8 +72,8 @@ schedule:
   outages_today: "🗓 Графік відключень на сьогодні.\n{name}, {date}:\n"
   outages_tomorrow: "🗓 Графік відключень на завтра.\n{name}, {date}:\n"
   outages_today_updated: "🗓 Оновлений графік відключень на сьогодні.\n{name}, {date}:\n"
-  outage_period_online: "🟢 {start} - {end}"
-  outage_period_offline: "🔴 {start} - {end}"
+  outage_period_online: "🟢 {start} - {end} ({duration})"
+  outage_period_offline: "🔴 {start} - {end} ({duration})"
   no_outages_today: "❎ Без відключень на сьогодні.\n{name}, {date}."
   no_outages_tomorrow: "❎ Без відключень на завтра.\n{name}, {date}."
 

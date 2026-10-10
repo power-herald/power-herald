@@ -65,6 +65,14 @@ def format_clock(value: str) -> str:
     return create_message("time.short.without_days", hours=f"{int(hours):02d}", minutes=f"{int(minutes):02d}")
 
 
+def _clock_delta(start: str, end: str) -> datetime.timedelta:
+    def minutes(value: str) -> int:
+        hours, mins = value.split(":")[:2]
+        return int(hours) * 60 + int(mins)
+
+    return datetime.timedelta(minutes=minutes(end) - minutes(start))
+
+
 def format_duration(value: datetime.timedelta, style: str = "long") -> str:
     total_minutes = int(value.total_seconds() // 60)
     days = 0
@@ -164,6 +172,7 @@ def schedule_message(
                 f"schedule.outage_period_{outage.get('status', 'offline')}",
                 start=format_clock(outage["start"]),
                 end=format_clock(outage["end"]),
+                duration=format_duration(_clock_delta(outage["start"], outage["end"])),
             )
         )
         if _is_outdated(date, outage["end"], as_of):
