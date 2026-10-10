@@ -84,7 +84,7 @@ async def update_once(force: bool = False) -> bool:
 async def send_schedule_once(
     notification_type: OutageNotificationType, target_date: dt.date
 ) -> bool:
-    if is_emergency():
+    if notification_type is OutageNotificationType.TODAY and is_emergency():
         logger.info("Emergency mode enabled; skipping %s outage schedule", notification_type.value)
         return False
     today = config.now().date()
