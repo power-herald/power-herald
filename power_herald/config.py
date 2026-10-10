@@ -77,10 +77,10 @@ class Config:
         return driver
 
     @property
-    def db_engine_options(self) -> dict[str, dict[str, bool]]:
+    def db_engine_options(self) -> dict[str, Any]:
         if self.db_driver == "sqlite":
             return {"connect_args": {"check_same_thread": False}}
-        return {}
+        return {"pool_pre_ping": True}
 
     @property
     def db_file_path(self) -> str | None:
