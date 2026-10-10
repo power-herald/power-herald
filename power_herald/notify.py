@@ -8,6 +8,7 @@ from power_herald.models import Chat, Outage, Period, PowerGroup, PowerSource, S
 import os
 import datetime
 from power_herald.config import get_config
+from power_herald.emergency import is_emergency
 from power_herald.outage_data import day_outages
 from power_herald.messages import (
     format_clock,
@@ -36,6 +37,8 @@ def next_outage_message(
     timestamp: datetime.datetime,
 ) -> str | None:
     if not config.notifications_track_next_scheduled_outage or (source and source.is_generator):
+        return None
+    if is_emergency():
         return None
 
     timestamp = timestamp.astimezone(config.timezone) if timestamp.tzinfo else timestamp.replace(tzinfo=config.timezone)

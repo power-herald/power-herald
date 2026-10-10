@@ -16,6 +16,7 @@ from power_herald.models import (
     Base,
     ActiveSource,
     Chat,
+    Emergency,
     GeneratorSource,
     MaintenanceMode,
     Period,
@@ -132,6 +133,12 @@ def build_parser() -> argparse.ArgumentParser:
     notifications.add_argument("--from", dest="from_time", type=parse_datetime)
     notifications.add_argument("--to", dest="to_time", type=parse_datetime)
     notifications.add_argument("--json", action="store_true")
+
+    emergencies = commands.add_parser("emergencies", help="list emergency mode records")
+    emergencies.add_argument("--enabled", type=int, choices=(0, 1))
+    emergencies.add_argument("--from", dest="from_time", type=parse_datetime)
+    emergencies.add_argument("--to", dest="to_time", type=parse_datetime)
+    emergencies.add_argument("--json", action="store_true")
 
     weekly_notifications = commands.add_parser(
         "weekly-notifications", help="list weekly outage statistics notifications"
@@ -264,6 +271,17 @@ def list_notifications(session: Session, model: Any, arguments: argparse.Namespa
     return query.order_by(time_column.desc(), model.id.desc()).all()
 
 
+def list_emergencies(session: Session, arguments: argparse.Namespace) -> list[Any]:
+    query = session.query(Emergency)
+    if arguments.enabled is not None:
+        query = query.filter(Emergency.enabled == bool(arguments.enabled))
+    if arguments.from_time is not None:
+        query = query.filter(Emergency.started_at >= arguments.from_time)
+    if arguments.to_time is not None:
+        query = query.filter(Emergency.started_at <= arguments.to_time)
+    return query.order_by(Emergency.started_at.desc(), Emergency.id.desc()).all()
+
+
 def run(arguments: argparse.Namespace) -> int:
     db_url = arguments.db_url
     engine_options = {}
@@ -316,6 +334,8 @@ def run(arguments: argparse.Namespace) -> int:
                                    "weekly-notifications": WeeklyStatisticsNotification}
             if arguments.command in history_models:
                 output(list_history(session, history_models[arguments.command], arguments), arguments.json)
+            elif arguments.command == "emergencies":
+                output(list_emergencies(session, arguments), arguments.json)
             else:
                 output(list_notifications(session, notification_models[arguments.command], arguments), arguments.json)
     return 0

@@ -5,6 +5,7 @@ bot:
     approve: "Usage: /approve <chat_id>"
     subscribe: "Usage: /subscribe <chat_id> <source_id>"
     maintenance: "Usage: /maintenance <source_id|global> <on|off> [comment]"
+    emergency: "Usage: /emergency <on|off> [comment]"
 
 admin:
   error:
@@ -25,6 +26,7 @@ admin:
   source_list_item: "{source_id}: {source_name} ({source_type}, {status})"
   chat_list_item: "{chat_id}: {title} ({status})"
   maintenance_status: "Maintenance {status} for {scope}."
+  emergency_status: "Emergency {status}."
   schedule_update_completed: "Outage schedule update completed."
   generator_status: "⚠️ Generator notifications for {source_name} set to {status}."
 
@@ -67,6 +69,10 @@ notification:
   outage:
     next_online: "⏭ Наступне планове відновлення:\n🟢 {start}"
     next_offline: "⏭ Наступне планове відключення:\n🔴 {start}"
+  emergency:
+    enabled: "⚠️ Задіяно екстрені/аварійні відключення. Графіки не діють."
+    disabled: "⚠️ Скасовано екстрені/аварійні відключення. Графіки знову діють."
+    comment: "💬 {comment}"
 
 schedule:
   outages_today: "🗓 Графік відключень на сьогодні.\n{name}, {date}:\n"

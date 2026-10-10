@@ -308,6 +308,43 @@ async def maintenance_cmd(message: types.Message):
     await message.answer(response_message)
 
 
+@router.message(Command("emergency"))
+async def emergency_cmd(message: types.Message):
+    _log_command(message, "/emergency")
+    if str(message.chat.id) not in config.admin_chat_ids:
+        _log_command_warning(message, "/emergency", "not authorized")
+        await message.answer(get_message("admin.error.not_authorized"))
+        return
+    args = message.text.split()
+    if len(args) < 2 or args[1] not in ("on", "off"):
+        _log_command_warning(message, "/emergency", "missing state")
+        await message.answer(get_message("bot.usage.emergency"))
+        return
+    enabled = args[1] == "on"
+    comment = " ".join(args[2:]) if len(args) > 2 else None
+    from power_herald.emergency import set_emergency
+    changed = set_emergency(enabled, comment)
+    await message.answer(get_message(
+        "admin.emergency_status",
+        status="enabled" if enabled else "disabled",
+    ))
+    if changed:
+        await _broadcast_emergency(message.bot, enabled, comment)
+
+
+async def _broadcast_emergency(bot, enabled: bool, comment: str | None) -> None:
+    text = get_message(f"notification.emergency.{'enabled' if enabled else 'disabled'}")
+    if enabled and comment:
+        text = f"{text}\n{get_message('notification.emergency.comment', comment=comment)}"
+    with Session() as session:
+        chats = session.query(Chat).filter_by(enabled=True).all()
+        for chat in chats:
+            try:
+                await bot.send_message(chat.chat_id, text, message_thread_id=chat.thread_id)
+            except Exception:
+                logger.exception("Failed to send emergency notification to %s", chat.chat_id)
+
+
 @router.message(Command("publish_schedule"))
 async def publish_schedule_cmd(message: types.Message):
     _log_command(message, "/publish_schedule")

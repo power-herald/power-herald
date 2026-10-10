@@ -8,6 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from power_herald.config import get_config
+from power_herald.emergency import is_emergency
 from power_herald.messages import schedule_message_from_json
 from power_herald.models import (
     Base,
@@ -32,6 +33,9 @@ config = get_config()
 logger = logging.getLogger("schedule")
 
 async def update_once(force: bool = False) -> bool:
+    if is_emergency():
+        logger.info("Emergency mode enabled; skipping outage schedule update")
+        return False
     logger.info("Starting outage schedule update from %s", config.outage_data_source)
     engine = create_engine(config.db_url, **config.db_engine_options)
     Base.metadata.create_all(engine)
@@ -80,6 +84,9 @@ async def update_once(force: bool = False) -> bool:
 async def send_schedule_once(
     notification_type: OutageNotificationType, target_date: dt.date
 ) -> bool:
+    if is_emergency():
+        logger.info("Emergency mode enabled; skipping %s outage schedule", notification_type.value)
+        return False
     today = config.now().date()
     engine = create_engine(config.db_url, **config.db_engine_options)
     Base.metadata.create_all(engine)

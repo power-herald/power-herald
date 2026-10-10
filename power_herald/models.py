@@ -143,6 +143,16 @@ class MaintenanceMode(Base):
     comment: Mapped[str | None] = mapped_column(Text)
     source: Mapped[PowerSource | None] = relationship()
 
+class Emergency(Base):
+    __tablename__ = 'emergencies'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    comment: Mapped[str | None] = mapped_column(Text)
+    started_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    ended_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
 class OutageData(Base):
     __tablename__ = 'outage_data'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

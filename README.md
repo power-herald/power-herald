@@ -63,6 +63,7 @@ placeholder names intact when customizing a message.
 │   ├── outage_data.py      # Third-party source of outage schedule retrieving and parsing
 │   ├── outage_periods.py   # Outage period tracking & duration calculation
 │   ├── maintenance.py      # Maintenance mode management
+│   ├── emergency.py        # Emergency mode management
 │   ├── schedule.py         # Outage schedule notifications (today, tomorrow, and weekly statistics)
 │   ├── weekly_stats.py     # Previous-week outage statistics and two-hour charts
 │   ├── cli.py              # Console management client application for database entities
@@ -223,6 +224,7 @@ Set `POWER_HERALD_CONFIG` when mounting the configuration at a different path.
 ./ph-cli power-states --source-id 1 --state offline
 ./ph-cli state-changes --from 2026-01-01T00:00:00Z --to 2026-01-31T23:59:59Z
 ./ph-cli outage-periods --source-id 1 --json
+./ph-cli emergencies --enabled 1
 ```
 
 The CRUD resources are `groups`, `sources`, `group-sources`, `subscriptions`,
@@ -231,6 +233,8 @@ source subtype options are accepted on `sources add` and `sources update` and
 are optional. State snapshots, state
 changes, and outage periods are list-only and support
 `--source-id`, `--state`, `--from`, `--to`, and `--json` filters.
+`emergencies` is list-only and supports `--enabled`, `--from`,
+`--to`, and `--json`.
 
 **OpenRC installation** (see OPENRC_SETUP.md): the ebuild installs the init
 script automatically; just enable and start it:
@@ -281,6 +285,7 @@ See `config.yaml` for all available options.
 - `/activate` - Request chat activation (notifies admin)
 - `/approve <chat_id>` - Approve chat activation (admin only)
 - `/maintenance <source_id|global> <on|off> [comment]` - Toggle maintenance mode
+- `/emergency <on|off> [comment]` - Toggle global emergency mode (disables scheduled-outage features: schedule messages and next outage hints) and notify all enabled chats
 - `/publish_schedule` - Publish the current outage schedule now (admin only)
 - `Start Generator` / `Stop Generator` - Control the generator from an activated chat
 
@@ -353,6 +358,7 @@ entry points, for example `venv/bin/python -m power_herald.bot` or
 - `chats` - Telegram chats subscribed to service
 - `subscriptions` - Chat-to-source mappings
 - `maintenance_modes` - Global or per-source maintenance toggles
+- `emergencies` - History of emergency mode changes
 
 ## Database Security
 

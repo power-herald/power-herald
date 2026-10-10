@@ -54,6 +54,7 @@ async def configure_command_menu() -> None:
         BotCommand(command="sources", description="List power sources"),
         BotCommand(command="chats", description="List chats"),
         BotCommand(command="maintenance", description="Toggle maintenance mode"),
+        BotCommand(command="emergency", description="Toggle emergency mode"),
         BotCommand(command="publish_schedule", description="Publish outage schedule now"),
     ]
 
