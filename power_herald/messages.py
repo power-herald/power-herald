@@ -166,7 +166,11 @@ def schedule_message(
         return _escape_markdown_v2(get_message(empty_key, date=format_date(date), name=name))
 
     lines = [_escape_markdown_v2(get_message(title_key, date=format_date(date), name=name))]
+    totals = {"offline": datetime.timedelta(), "online": datetime.timedelta()}
     for outage in outages:
+        status = outage.get("status", "offline")
+        if status in totals:
+            totals[status] += _clock_delta(outage["start"], outage["end"])
         line = _escape_markdown_v2(
             get_message(
                 f"schedule.outage_period_{outage.get('status', 'offline')}",
@@ -178,6 +182,11 @@ def schedule_message(
         if _is_outdated(date, outage["end"], as_of):
             line = f"~{line}~"
         lines.append(line)
+    lines.append(_escape_markdown_v2(get_message(
+        "schedule.summary",
+        total_offline=format_duration(totals["offline"]),
+        total_online=format_duration(totals["online"]),
+    )))
     return "\n".join(lines)
 
 

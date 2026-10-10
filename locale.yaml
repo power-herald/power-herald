@@ -82,6 +82,7 @@ schedule:
   outage_period_offline: "🔴 {start} - {end} ({duration})"
   no_outages_today: "❎ Без відключень на сьогодні.\n{name}, {date}."
   no_outages_tomorrow: "❎ Без відключень на завтра.\n{name}, {date}."
+  summary: "\nЗагалом: 🔴 {total_offline} / 🟢 {total_online}"
 
 weekly_stats:
   title: "📊 Тижневий звіт\n{week_start} - {week_end}\n\n{source_name}, час відключень по дням:\n"
