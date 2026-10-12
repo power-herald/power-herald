@@ -86,11 +86,11 @@ schedule:
 
 weekly_stats:
   title: "📊 Тижневий звіт\n{week_start} - {week_end}\n\n{source_name}, час відключень по дням:\n"
-  summary: "\nЗагальний час відключень: {total_duration}"
+  summary: "\nЗагальний час відключень:\n{total_duration}"
   weekdays: ["Пн", "Вв", "Ср", "Чт", "Пт", "Сб", "Нд"]
   chart:
     online: "█"
-    offline: " "
+    offline: " "
     mixed: "░"
     begin: "▕"
     end: "▏"

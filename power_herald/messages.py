@@ -99,7 +99,6 @@ def state_change_message(
     message_key = f"notification.source.{state_key}"
     parts = [get_message(message_key, source_name=source_name, state=state.upper(), source_description=source_description or "")]
     if duration:
-        parts.append("")
         duration_key = f"notification.source.{state_key}_duration"
         parts.append(get_message(duration_key, duration=format_duration(duration)))
     return "\n".join(parts)
@@ -117,7 +116,6 @@ def generator_state_change_message(
     message_key = f"notification.generator.{state_key}"
     parts = [get_message(message_key, source_name=source_name, state=state.upper(), source_description=source_description or "")]
     if duration and state_key == "offline":
-        parts.append("")
         duration_key = f"notification.generator.{state_key}_duration"
         parts.append(get_message(duration_key, duration=format_duration(duration)))
     if maintenance_window:
