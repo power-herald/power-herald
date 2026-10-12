@@ -211,12 +211,13 @@ def weekly_statistics_message(
 ) -> str:
     weekdays = _locale_value("weekly_stats.weekdays")
     chart = _locale_value("weekly_stats.chart")
-    lines = [get_message(
+    title = get_message(
         "weekly_stats.title",
         source_name=source_name,
         week_start=format_date(week_start),
         week_end=format_date(week_end),
-    )]
+    )
+    lines = [_escape_markdown_v2(title)]
     for index, (blocks, offline_duration) in enumerate(days):
         duration = format_duration(offline_duration, "short")
         line = create_message(
@@ -229,5 +230,6 @@ def weekly_statistics_message(
         )
         lines.append(f"`{_escape_markdown_v2_code(line)}`")
     total_duration = sum((offline_duration for _, offline_duration in days), datetime.timedelta())
-    lines.append(get_message("weekly_stats.summary", total_duration=format_duration(total_duration)))
+    summary = get_message("weekly_stats.summary", total_duration=format_duration(total_duration))
+    lines.append(_escape_markdown_v2(summary))
     return "\n".join(lines)
