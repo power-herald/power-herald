@@ -19,6 +19,7 @@ logger = logging.getLogger("processor")
 
 engine = create_engine(config.db_url, **config.db_engine_options)
 Session = sessionmaker(bind=engine)
+started_at = config.now()
 
 
 def as_config_timezone(timestamp):
@@ -32,11 +33,12 @@ def current_state(session, source, timestamp):
     observed = latest_state(session, source.id, stable_only=True)
     if is_maintenance(source.id)[0]:
         return known.state if known else StateChangeType.OFFLINE
-    if source.type == PowerSourceType.ACTIVE and (
-        observed is None or as_config_timezone(observed.last_updated_at) < timestamp - datetime.timedelta(
-            seconds=config.active_probe_timeout
-        )
-    ):
+    timeout = datetime.timedelta(seconds=config.active_probe_timeout)
+    stale = observed is None or as_config_timezone(observed.last_updated_at) < timestamp - timeout
+    if source.type == PowerSourceType.ACTIVE and stale and known and timestamp - started_at < timeout:
+        # Active probes need time to report after a restart.
+        return known.state
+    if source.type == PowerSourceType.ACTIVE and stale:
         if observed and observed.state == StateChangeType.ONLINE:
             record_state(session, source.id, StateChangeType.OFFLINE, timestamp)
         return StateChangeType.OFFLINE
@@ -107,7 +109,9 @@ async def process_sources():
 
 
 async def main(stop_event=None, ready_event=None):
+    global started_at
     stop_event = use_stop_event(stop_event)
+    started_at = config.now()
     try:
         logger.info("State processor started")
         if ready_event is not None:
