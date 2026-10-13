@@ -160,8 +160,11 @@ CREATE TABLE IF NOT EXISTS outages (
 CREATE TABLE IF NOT EXISTS outage_notifications (
     id INT NOT NULL AUTO_INCREMENT,
     posted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    type ENUM('TODAY', 'TOMORROW') NOT NULL,
-    PRIMARY KEY (id)
+    type ENUM('TODAY', 'TOMORROW', 'IMMEDIATE') NOT NULL,
+    posted_for DATE NOT NULL,
+    schedule_hash VARCHAR(64) NOT NULL,
+    PRIMARY KEY (id),
+    KEY ix_outage_notifications_posted_for_hash (posted_for, schedule_hash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS weekly_statistics_notifications (

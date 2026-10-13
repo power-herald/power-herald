@@ -37,11 +37,14 @@ async def update_once(force: bool = False) -> bool:
         logger.info("Emergency mode enabled; skipping outage schedule update")
         return False
     logger.info("Starting outage schedule update from %s", config.outage_data_source)
+    today = config.now().date()
     engine = create_engine(config.db_url, **config.db_engine_options)
     Base.metadata.create_all(engine)
     data = fetch_outage_data(source=config.outage_data_source)
     current_hash = content_hash(data)
     logger.debug("Fetched outage data with content hash %s", current_hash)
+    prepared_messages = prepare_messages(data, config.gpvs)
+    schedule_hash = content_hash(prepared_messages)
     changed_messages: list[dict] = []
     with sessionmaker(bind=engine)() as session:
         previous = session.query(OutageData).order_by(OutageData.id.desc()).first()
@@ -57,8 +60,7 @@ async def update_once(force: bool = False) -> bool:
             session.add(OutageData(content_hash=current_hash, json=data))
         prepared_count = 0
         outage_count = 0
-        today = config.now().date()
-        for name, message in prepare_messages(data, config.gpvs).items():
+        for name, message in prepared_messages.items():
             prepared_count += 1
             outage_count += len(day_outages(message, today))
             current_message_hash = message_hash(message)
@@ -69,6 +71,14 @@ async def update_once(force: bool = False) -> bool:
             else:
                 session.add(Outage(name=name, message_hash=current_message_hash, message=message))
             changed_messages.append(message)
+        latest_notification = (
+            session.query(OutageNotification)
+            .filter_by(posted_for=today)
+            .order_by(OutageNotification.posted_at.desc(), OutageNotification.id.desc())
+            .first()
+        )
+        if latest_notification and latest_notification.schedule_hash == schedule_hash:
+            changed_messages = []
         session.commit()
         logger.info(
             "Stored outage data for %s groups: %s outage periods, %s messages to send",
@@ -76,7 +86,18 @@ async def update_once(force: bool = False) -> bool:
             outage_count,
             len(changed_messages),
         )
-    await send_messages(config.bot_token, changed_messages, date=config.now().date(), updated=True)
+    await send_messages(config.bot_token, changed_messages, date=today, updated=True)
+    if changed_messages:
+        with sessionmaker(bind=engine)() as session:
+            session.add(
+                OutageNotification(
+                    posted_at=config.now(),
+                    type=OutageNotificationType.IMMEDIATE,
+                    posted_for=today,
+                    schedule_hash=schedule_hash,
+                )
+            )
+            session.commit()
     logger.info("Outage schedule update completed")
     return True
 
@@ -87,19 +108,9 @@ async def send_schedule_once(
     if notification_type is OutageNotificationType.TODAY and is_emergency():
         logger.info("Emergency mode enabled; skipping %s outage schedule", notification_type.value)
         return False
-    today = config.now().date()
     engine = create_engine(config.db_url, **config.db_engine_options)
     Base.metadata.create_all(engine)
     with sessionmaker(bind=engine)() as session:
-        previous_notification = (
-            session.query(OutageNotification)
-            .filter_by(type=notification_type)
-            .order_by(OutageNotification.posted_at.desc())
-            .first()
-        )
-        if previous_notification and previous_notification.posted_at.date() == today:
-            logger.info("%s outage schedule was already sent for %s", notification_type.value, today)
-            return False
         latest = session.query(OutageData).order_by(OutageData.id.desc()).first()
         if latest is None:
             logger.info("No outage data available; skipping %s outage schedule", notification_type.value)
@@ -108,10 +119,21 @@ async def send_schedule_once(
         if notification_type is OutageNotificationType.TODAY and not has_offline_periods(messages, target_date):
             logger.info("No offline periods in today's outage data; skipping outage schedule")
             return False
+        schedule_hash = content_hash(messages)
+        latest_notification = (
+            session.query(OutageNotification)
+            .filter_by(posted_for=target_date)
+            .order_by(OutageNotification.posted_at.desc(), OutageNotification.id.desc())
+            .first()
+        )
+        if latest_notification and latest_notification.schedule_hash == schedule_hash:
+            logger.info("Outage schedule for %s was already sent with the latest hash", target_date)
+            return False
+        messages = list(messages.values())
 
     await send_messages(
         config.bot_token,
-        list(messages.values()),
+        messages,
         today=notification_type is OutageNotificationType.TODAY,
         date=target_date,
     )
@@ -120,6 +142,8 @@ async def send_schedule_once(
             OutageNotification(
                 posted_at=config.now(),
                 type=notification_type,
+                posted_for=target_date,
+                schedule_hash=schedule_hash,
             )
         )
         session.commit()

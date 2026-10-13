@@ -4,7 +4,19 @@ from __future__ import annotations
 import datetime
 import enum
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, Integer, String, Boolean, Text, UniqueConstraint, JSON
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    JSON,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -175,9 +187,11 @@ class Outage(Base):
 class OutageNotificationType(enum.Enum):
     TODAY = "today"
     TOMORROW = "tomorrow"
+    IMMEDIATE = "immediate"
 
 class OutageNotification(Base):
     __tablename__ = 'outage_notifications'
+    __table_args__ = (Index('ix_outage_notifications_posted_for_hash', 'posted_for', 'schedule_hash'),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     posted_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -185,6 +199,8 @@ class OutageNotification(Base):
     type: Mapped[OutageNotificationType] = mapped_column(
         Enum(OutageNotificationType), nullable=False
     )
+    posted_for: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    schedule_hash: Mapped[str] = mapped_column(String(64), nullable=False)
 
 class WeeklyStatisticsNotification(Base):
     __tablename__ = 'weekly_statistics_notifications'

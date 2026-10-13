@@ -224,6 +224,7 @@ Set `POWER_HERALD_CONFIG` when mounting the configuration at a different path.
 ./ph-cli power-states --source-id 1 --state offline
 ./ph-cli state-changes --from 2026-01-01T00:00:00Z --to 2026-01-31T23:59:59Z
 ./ph-cli outage-periods --source-id 1 --json
+./ph-cli outage-notifications --posted-for 2026-01-01 --json
 ./ph-cli emergencies --enabled 1
 ```
 
@@ -235,6 +236,10 @@ changes, and outage periods are list-only and support
 `--source-id`, `--state`, `--from`, `--to`, and `--json` filters.
 `emergencies` is list-only and supports `--enabled`, `--from`,
 `--to`, and `--json`.
+`outage-notifications` is list-only and supports `--type`, `--posted-for`,
+`--from`, `--to`, and `--json`; its records include the notification type,
+related date, and schedule hash. `immediate` records are created when an
+updated schedule is posted, while `today` and `tomorrow` record scheduled posts.
 
 **OpenRC installation** (see OPENRC_SETUP.md): the ebuild installs the init
 script automatically; just enable and start it:
@@ -354,6 +359,7 @@ entry points, for example `venv/bin/python -m power_herald.bot` or
 - `active_sources` - Optional active-probe secrets mapped to power sources
 - `state_changes` - State transitions (online/offline)
 - `periods` - Online/offline source state periods with start/stop timestamps
+- `outage_notifications` - Schedule notification history, deduplicated by related date and schedule hash across notification types
 - `weekly_statistics_notifications` - Deduplication records for weekly statistics reports
 - `chats` - Telegram chats subscribed to service
 - `subscriptions` - Chat-to-source mappings

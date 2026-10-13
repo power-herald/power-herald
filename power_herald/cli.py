@@ -53,6 +53,13 @@ def parse_datetime(value: str) -> dt.datetime:
         raise argparse.ArgumentTypeError("use an ISO-8601 datetime") from error
 
 
+def parse_date(value: str) -> dt.date:
+    try:
+        return dt.date.fromisoformat(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("use an ISO-8601 date") from error
+
+
 def enum_value(enum_type: type, value: str) -> Any:
     try:
         return enum_type[value.upper()]
@@ -128,8 +135,9 @@ def build_parser() -> argparse.ArgumentParser:
         listing.add_argument("--to", dest="to_time", type=parse_datetime)
         listing.add_argument("--json", action="store_true")
 
-    notifications = commands.add_parser("outage-notifications", help="list today/tomorrow outage notifications")
+    notifications = commands.add_parser("outage-notifications", help="list outage notifications")
     notifications.add_argument("--type", type=lambda value: enum_value(OutageNotificationType, value))
+    notifications.add_argument("--posted-for", type=parse_date)
     notifications.add_argument("--from", dest="from_time", type=parse_datetime)
     notifications.add_argument("--to", dest="to_time", type=parse_datetime)
     notifications.add_argument("--json", action="store_true")
@@ -261,6 +269,8 @@ def list_notifications(session: Session, model: Any, arguments: argparse.Namespa
     query = session.query(model)
     if model is OutageNotification and arguments.type is not None:
         query = query.filter(model.type == arguments.type)
+    if model is OutageNotification and arguments.posted_for is not None:
+        query = query.filter(model.posted_for == arguments.posted_for)
     if hasattr(arguments, "source_id") and arguments.source_id is not None:
         query = query.filter(model.source_id == arguments.source_id)
     time_column = OutageNotification.posted_at if model is OutageNotification else WeeklyStatisticsNotification.sent_at
