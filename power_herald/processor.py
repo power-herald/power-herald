@@ -11,7 +11,7 @@ from power_herald.models import PowerSource, PowerGroup, PowerSourceType, StateC
 from power_herald.notify import bot as notify_bot
 from power_herald.notify import close_resources as close_notify_resources
 from power_herald.notify import notify_group_state_change, notify_state_change
-from power_herald.state_store import latest_change, latest_state, record_change
+from power_herald.state_store import latest_change, latest_state, record_change, record_state
 from power_herald.lifecycle import use_stop_event
 
 config = get_config()
@@ -37,6 +37,8 @@ def current_state(session, source, timestamp):
             seconds=config.active_probe_timeout
         )
     ):
+        if observed and observed.state == StateChangeType.ONLINE:
+            record_state(session, source.id, StateChangeType.OFFLINE, timestamp)
         return StateChangeType.OFFLINE
     return observed.state if observed else StateChangeType.OFFLINE
 
