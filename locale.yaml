@@ -91,9 +91,9 @@ weekly_stats:
   summary: "\nЗагальний час відключень:\n{total_duration}"
   weekdays: ["Пн", "Вв", "Ср", "Чт", "Пт", "Сб", "Нд"]
   chart:
-    online: "█"
-    offline: " "
-    mixed: "░"
-    begin: "▕"
-    end: "▏"
+    online: "●"
+    offline: "○"
+    mixed: "◎"
+    begin: " "
+    end: " "
   line: "{weekday}{begin}{chart}{end}{duration}"
