@@ -98,7 +98,7 @@ async def notify_state_change(source_id: int, state: StateChangeType, timestamp:
                 )
             outage_message = next_outage_message(session, source, state, timestamp)
             if outage_message:
-                msg = f"{msg}\n\n{outage_message}"
+                msg = f"{msg}\n{outage_message}"
             await bot.send_message(chat.chat_id, msg, message_thread_id=chat.thread_id)
             logger.warning("Notified %s: %s", chat.title or chat.chat_id, msg.replace("\n", "↵"))
     finally:
