@@ -62,7 +62,7 @@ def format_date(value: datetime.date | str) -> str:
 
 def format_clock(value: str) -> str:
     hours, minutes = value.split(":")[:2]
-    return create_message("time.short.without_days", hours=f"{int(hours):02d}", minutes=f"{int(minutes):02d}")
+    return create_message("time", hours=f"{int(hours):02d}", minutes=f"{int(minutes):02d}")
 
 
 def _clock_delta(start: str, end: str) -> datetime.timedelta:
@@ -76,13 +76,28 @@ def _clock_delta(start: str, end: str) -> datetime.timedelta:
 def format_duration(value: datetime.timedelta, style: str = "long") -> str:
     total_minutes = int(value.total_seconds() // 60)
     days = 0
-    if value > datetime.timedelta(days=1):
+    if value >= datetime.timedelta(days=1):
         days, total_minutes = divmod(total_minutes, 24 * 60)
     hours, minutes = divmod(total_minutes, 60)
-    key = f"time.{style}.{'with_days' if days else 'without_days'}"
     if style == "short":
-        return create_message(key, days=days, hours=f"{hours:02d}", minutes=f"{minutes:02d}")
-    return create_message(key, days=days, hours=hours, minutes=minutes)
+        parts = []
+        if days:
+            parts.append(create_message("duration.short.days", days=days))
+        parts.append(create_message(
+            "duration.short.clock",
+            hours=f"{hours:02d}",
+            minutes=f"{minutes:02d}",
+        ))
+        return "".join(parts)
+
+    parts = [
+        create_message(f"duration.long.{name}", **{name: amount})
+        for name, amount in (("days", days), ("hours", hours), ("minutes", minutes))
+        if amount
+    ]
+    if not parts:
+        parts.append(create_message("duration.long.minutes", minutes=0))
+    return " ".join(parts)
 
 
 def bot_greeting(chat_id: int, thread_id: int | None) -> str:

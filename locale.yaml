@@ -31,14 +31,16 @@ admin:
   generator_status: "⚠️ Generator notifications for {source_name} set to {status}."
 
 date: "{day}.{month}.{year}"
+time: "{hours}:{minutes}"
 
-time:
+duration:
   long:
-    with_days: "{days} дн. {hours} год. {minutes} хв."
-    without_days: "{hours} год. {minutes} хв."
+    days: "{days} дн."
+    hours: "{hours} год."
+    minutes: "{minutes} хв."
   short:
-    with_days: "{days}.{hours}:{minutes}"
-    without_days: "{hours}:{minutes}"
+    days: "{days}."
+    clock: "{hours}:{minutes}"
 
 generator:
   start_button: "▶ Генератор запущено"
