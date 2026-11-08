@@ -1,12 +1,16 @@
+import logging
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from power_herald.config import get_config
-from power_herald.models import Emergency
+from power_herald.messages import get_message
+from power_herald.models import Chat, Emergency
 
 config = get_config()
 engine = create_engine(config.db_url, **config.db_engine_options)
 Session = sessionmaker(bind=engine)
+logger = logging.getLogger("emergency")
 
 
 def is_emergency() -> bool:
@@ -30,3 +34,16 @@ def set_emergency(enabled, comment=None) -> bool:
                 emergency.ended_at = config.now()
         session.commit()
         return True
+
+
+async def broadcast_emergency(bot, enabled: bool, comment: str | None = None) -> None:
+    text = get_message(f"notification.emergency.{'enabled' if enabled else 'disabled'}")
+    if enabled and comment:
+        text = f"{text}\n{get_message('notification.emergency.comment', comment=comment)}"
+    with Session() as session:
+        chats = session.query(Chat).filter_by(enabled=True).all()
+        for chat in chats:
+            try:
+                await bot.send_message(chat.chat_id, text, message_thread_id=chat.thread_id)
+            except Exception:
+                logger.exception("Failed to send emergency notification to %s", chat.chat_id)

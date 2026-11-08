@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from power_herald.config import get_config
-from power_herald.emergency import is_emergency
+from power_herald.emergency import broadcast_emergency, is_emergency
 from power_herald.messages import schedule_message_from_json
 from power_herald.models import (
     Base,
@@ -46,6 +46,8 @@ async def update_once(force: bool = False) -> bool:
     prepared_messages = prepare_messages(data, config.gpvs)
     schedule_hash = content_hash(prepared_messages)
     changed_messages: list[dict] = []
+    previous_emergency = False
+    current_emergency = any(message["emergency"] for message in prepared_messages.values())
     with sessionmaker(bind=engine)() as session:
         previous = session.query(OutageData).order_by(OutageData.id.desc()).first()
         if previous and previous.content_hash == current_hash:
@@ -65,6 +67,8 @@ async def update_once(force: bool = False) -> bool:
             outage_count += len(day_outages(message, today))
             current_message_hash = message_hash(message)
             latest = session.query(Outage).filter_by(name=name).order_by(Outage.id.desc()).first()
+            if latest and latest.message.get("emergency", False):
+                previous_emergency = True
             if latest and latest.message_hash == current_message_hash:
                 if not force:
                     continue
@@ -77,7 +81,8 @@ async def update_once(force: bool = False) -> bool:
             .order_by(OutageNotification.posted_at.desc(), OutageNotification.id.desc())
             .first()
         )
-        if latest_notification and latest_notification.schedule_hash == schedule_hash:
+        if (latest_notification and latest_notification.schedule_hash == schedule_hash
+            and previous_emergency == current_emergency):
             changed_messages = []
         session.commit()
         logger.info(
@@ -86,8 +91,15 @@ async def update_once(force: bool = False) -> bool:
             outage_count,
             len(changed_messages),
         )
-    await send_messages(config.bot_token, changed_messages, date=today, updated=True)
-    if changed_messages:
+    if previous_emergency != current_emergency:
+        bot = Bot(token=config.bot_token)
+        try:
+            await broadcast_emergency(bot, current_emergency)
+        finally:
+            await bot.session.close()
+    schedule_messages = [message for message in changed_messages if not message["emergency"]]
+    await send_messages(config.bot_token, schedule_messages, date=today, updated=True)
+    if schedule_messages:
         with sessionmaker(bind=engine)() as session:
             session.add(
                 OutageNotification(
@@ -115,11 +127,18 @@ async def send_schedule_once(
         if latest is None:
             logger.info("No outage data available; skipping %s outage schedule", notification_type.value)
             return False
-        messages = prepare_messages(latest.json, config.gpvs)
+        prepared_messages = prepare_messages(latest.json, config.gpvs)
+        schedule_hash = content_hash(prepared_messages)
+        messages = {
+            name: message for name, message in prepared_messages.items()
+            if not message["emergency"]
+        }
+        if not messages:
+            logger.info("All outage groups are in emergency; skipping outage schedule")
+            return False
         if notification_type is OutageNotificationType.TODAY and not has_offline_periods(messages, target_date):
             logger.info("No offline periods in today's outage data; skipping outage schedule")
             return False
-        schedule_hash = content_hash(messages)
         latest_notification = (
             session.query(OutageNotification)
             .filter_by(posted_for=target_date)

@@ -276,10 +276,13 @@ outages:
   gpvs:
     - name: "Kyiv GPV 37.1"
       id: "GPV37.1"
+      district: ["Дарницький", "Дарницкого"]
 
 ```
 
 See `config.yaml` for all available options.
+
+The optional `district` aliases are matched case-insensitively against the outage feed's emergency district text. A global emergency or a matching district triggers the same alert as `/emergency`; an all-clear is sent when no configured group remains affected. Schedules are suppressed for affected groups. Automatic alerts do not change manual emergency mode.
 
 ### Outage Data Sources
 

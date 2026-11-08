@@ -322,27 +322,14 @@ async def emergency_cmd(message: types.Message):
         return
     enabled = args[1] == "on"
     comment = " ".join(args[2:]) if len(args) > 2 else None
-    from power_herald.emergency import set_emergency
+    from power_herald.emergency import broadcast_emergency, set_emergency
     changed = set_emergency(enabled, comment)
     await message.answer(get_message(
         "admin.emergency_status",
         status="enabled" if enabled else "disabled",
     ))
     if changed:
-        await _broadcast_emergency(message.bot, enabled, comment)
-
-
-async def _broadcast_emergency(bot, enabled: bool, comment: str | None) -> None:
-    text = get_message(f"notification.emergency.{'enabled' if enabled else 'disabled'}")
-    if enabled and comment:
-        text = f"{text}\n{get_message('notification.emergency.comment', comment=comment)}"
-    with Session() as session:
-        chats = session.query(Chat).filter_by(enabled=True).all()
-        for chat in chats:
-            try:
-                await bot.send_message(chat.chat_id, text, message_thread_id=chat.thread_id)
-            except Exception:
-                logger.exception("Failed to send emergency notification to %s", chat.chat_id)
+        await broadcast_emergency(message.bot, enabled, comment)
 
 
 @router.message(Command("publish_schedule"))

@@ -43,7 +43,7 @@ def next_outage_message(
 
     timestamp = timestamp.astimezone(config.timezone) if timestamp.tzinfo else timestamp.replace(tzinfo=config.timezone)
     outage = session.query(Outage).order_by(Outage.id.desc()).first()
-    if outage is None:
+    if outage is None or outage.message.get("emergency", False):
         return None
     next_state = StateChangeType.ONLINE if state == StateChangeType.OFFLINE else StateChangeType.OFFLINE
     for period in day_outages(outage.message, timestamp.date()):

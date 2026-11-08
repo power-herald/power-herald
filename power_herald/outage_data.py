@@ -107,14 +107,25 @@ def day_outages(message: dict[str, Any], date: dt.date) -> list[dict[str, Any]]:
     return message.get(weekday_key(date)) or []
 
 
-def prepare_messages(data: dict[str, Any], gpvs: list[dict[str, str]]) -> dict[str, dict[str, Any]]:
+def prepare_messages(data: dict[str, Any], gpvs: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     preset = data.get("preset") or {}
     fact = (data.get("fact") or {}).get("data", {})
     merged = merge_data(preset.get("data") or {}, fact)
     time_zone = preset.get("time_zone") or {}
+    emergency = data.get("emergency") or {}
+    enabled_districts = emergency.get("enabled_districts") or ""
     messages: dict[str, dict[str, Any]] = {}
     for gpv in gpvs:
-        message: dict[str, Any] = {"name": gpv["name"]}
+        districts = gpv.get("district") or []
+        if isinstance(districts, str):
+            districts = [districts]
+        message: dict[str, Any] = {
+            "name": gpv["name"],
+            "emergency": bool(emergency.get("enabled")) or any(
+                district.casefold() in enabled_districts.casefold()
+                for district in districts if isinstance(district, str) and district
+            ),
+        }
         for index, weekday_name in enumerate(WEEKDAYS, start=1):
             weekday = str(index)
             schedule = {

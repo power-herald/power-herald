@@ -57,6 +57,7 @@ outages:
   gpvs:
     - name: "Kyiv GPV 38.1"
       id: "GPV38.1"
+      district: ["Дарницький", "Дарницкого"]
 
 maintenance:
   default_enabled: false
