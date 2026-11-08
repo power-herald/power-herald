@@ -10,9 +10,15 @@ from sqlalchemy.orm import sessionmaker
 
 from power_herald.config import Config
 from power_herald.emergency import broadcast_emergency
-from power_herald.messages import get_message
+from power_herald.messages import get_message, schedule_message_from_json
 from power_herald.models import Base, Chat, OutageNotificationType
-from power_herald.outage_data import fetch_outage_data, prepare_messages
+from power_herald.outage_data import (
+    WEEKDAYS,
+    fetch_outage_data,
+    has_offline_periods,
+    is_unspecified,
+    prepare_messages,
+)
 from power_herald.schedule import send_schedule_once, update_once
 
 
@@ -34,6 +40,53 @@ class PrepareMessagesEmergencyTests(unittest.TestCase):
                 with self.subTest(emergency=emergency):
                     result = prepare_messages({"emergency": emergency}, groups)
                     self.assertEqual([result[group["name"]]["emergency"] for group in groups], expected)
+
+
+class StabilizingTests(unittest.TestCase):
+    groups = [{"id": "1", "name": "first"}]
+    # 2026-11-08 is Sunday, 2026-11-09 is Monday.
+    sunday = dt.date(2026, 11, 8)
+    monday = dt.date(2026, 11, 9)
+
+    def _prepare(self, stabilizing, merged):
+        data = {"stabilizing": {"enabled": stabilizing}}
+        with patch("power_herald.outage_data.merge_data", return_value=merged):
+            return prepare_messages(data, self.groups)["first"]
+
+    def test_empty_days_are_unspecified_when_stabilizing(self):
+        message = self._prepare(True, {})
+        self.assertEqual(message["unspecified"], list(WEEKDAYS))
+        self.assertTrue(is_unspecified(message, self.sunday))
+
+    def test_all_online_day_is_unspecified_when_stabilizing(self):
+        with patch("power_herald.outage_data._periods_for_day", return_value=[("online", "00:00", "24:00")]):
+            message = self._prepare(True, {"1": {"7": {"1": "yes"}}})
+        self.assertIn("sunday", message["unspecified"])
+
+    def test_day_with_offline_periods_is_specified(self):
+        periods = [("offline", "00:00", "04:00"), ("online", "04:00", "24:00")]
+        with patch("power_herald.outage_data._periods_for_day", return_value=periods):
+            message = self._prepare(True, {})
+        self.assertEqual(message["unspecified"] if "unspecified" in message else [], [])
+        self.assertFalse(is_unspecified(message, self.sunday))
+
+    def test_not_unspecified_without_stabilizing(self):
+        message = self._prepare(False, {})
+        self.assertNotIn("unspecified", message)
+        self.assertFalse(has_offline_periods({"first": message}, self.sunday))
+
+    def test_has_offline_periods_true_when_unspecified(self):
+        message = self._prepare(True, {})
+        self.assertTrue(has_offline_periods({"first": message}, self.sunday))
+
+    def test_messages_use_unspecified_keys(self):
+        message = self._prepare(True, {})
+        today_text = schedule_message_from_json(message, today=True, date=self.sunday.isoformat())
+        tomorrow_text = schedule_message_from_json(message, today=False, date=self.monday.isoformat())
+        self.assertIn("стабілізаційні", today_text)
+        self.assertIn("стабілізаційні", tomorrow_text)
+        plain = self._prepare(False, {})
+        self.assertNotIn("стабілізаційні", schedule_message_from_json(plain, date=self.sunday.isoformat()))
 
 
 class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):

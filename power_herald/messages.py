@@ -5,7 +5,7 @@ from typing import Any
 import yaml
 
 from power_herald.config import get_config
-from power_herald.outage_data import day_outages
+from power_herald.outage_data import day_outages, is_unspecified
 
 def _load_locale() -> dict[str, Any]:
     locale_path = Path(get_config().locale_file)
@@ -170,11 +170,15 @@ def schedule_message(
     today: bool = True,
     as_of: datetime.datetime | None = None,
     updated: bool = False,
+    unspecified: bool = False,
 ) -> str:
     title_key = "schedule.outages_today_updated" if today and updated else None
     title_key = title_key or ("schedule.outages_today" if today else "schedule.outages_tomorrow")
     empty_key = "schedule.no_outages_today" if today else "schedule.no_outages_tomorrow"
     as_of = as_of or get_config().now()
+    if not outages and unspecified:
+        key = "schedule.unspecified_today" if today else "schedule.unspecified_tomorrow"
+        return _escape_markdown_v2(get_message(key, date=format_date(date), name=name))
     if not outages:
         return _escape_markdown_v2(get_message(empty_key, date=format_date(date), name=name))
 
@@ -212,8 +216,12 @@ def schedule_message_from_json(
     date: str | None = None,
 ) -> str:
     message_date = date or get_config().now().date().isoformat()
-    outages = day_outages(message, datetime.date.fromisoformat(message_date))
-    return schedule_message(message_date, outages, message["name"], today=today, as_of=as_of, updated=updated)
+    parsed_date = datetime.date.fromisoformat(message_date)
+    outages = day_outages(message, parsed_date)
+    return schedule_message(
+        message_date, outages, message["name"], today=today, as_of=as_of, updated=updated,
+        unspecified=is_unspecified(message, parsed_date),
+    )
 
 
 def weekly_statistics_message(

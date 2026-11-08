@@ -114,6 +114,7 @@ def prepare_messages(data: dict[str, Any], gpvs: list[dict[str, Any]]) -> dict[s
     time_zone = preset.get("time_zone") or {}
     emergency = data.get("emergency") or {}
     enabled_districts = emergency.get("enabled_districts") or ""
+    stabilizing = bool((data.get("stabilizing") or {}).get("enabled"))
     messages: dict[str, dict[str, Any]] = {}
     for gpv in gpvs:
         districts = gpv.get("district") or []
@@ -126,6 +127,7 @@ def prepare_messages(data: dict[str, Any], gpvs: list[dict[str, Any]]) -> dict[s
                 for district in districts if isinstance(district, str) and district
             ),
         }
+        unspecified: list[str] = []
         for index, weekday_name in enumerate(WEEKDAYS, start=1):
             weekday = str(index)
             schedule = {
@@ -135,11 +137,19 @@ def prepare_messages(data: dict[str, Any], gpvs: list[dict[str, Any]]) -> dict[s
             periods = _periods_for_day(schedule, weekday)
             if periods == [("online", "00:00", "24:00")]:
                 periods = []
+            if stabilizing and not periods:
+                unspecified.append(weekday_name)
             message[weekday_name] = [
                 {"start": start, "end": end, "status": state} for state, start, end in periods
             ]
+        if unspecified:
+            message["unspecified"] = unspecified
         messages[gpv["name"]] = message
     return messages
+
+
+def is_unspecified(message: dict[str, Any], date: dt.date) -> bool:
+    return weekday_key(date) in (message.get("unspecified") or [])
 
 
 def has_offline_periods(messages: dict[str, dict[str, Any]], date: dt.date) -> bool:
@@ -147,7 +157,7 @@ def has_offline_periods(messages: dict[str, dict[str, Any]], date: dt.date) -> b
         outage.get("status") == "offline"
         for message in messages.values()
         for outage in day_outages(message, date)
-    )
+    ) or any(is_unspecified(message, date) for message in messages.values())
 
 
 def message_hash(message: dict[str, Any]) -> str:

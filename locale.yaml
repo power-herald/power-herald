@@ -84,6 +84,8 @@ schedule:
   outage_period_offline: "🔴 {start} - {end} ({duration})"
   no_outages_today: "❎ Без відключень на сьогодні.\n{name}, {date}."
   no_outages_tomorrow: "❎ Без відключень на завтра.\n{name}, {date}."
+  unspecified_today: "⚠️ Діють стабілізаційні відключення.\n{name}, {date}."
+  unspecified_tomorrow: "⚠️ Діють стабілізаційні відключення.\n{name}, {date}."
   summary: "\nЗагалом:\n○ {total_offline} без світла,\n● {total_online} зі світлом."
 
 weekly_stats:
