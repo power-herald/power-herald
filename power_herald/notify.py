@@ -137,7 +137,7 @@ async def notify_group_state_change(
         message = group_state_change_message(group.name, group.description, state.value, durations)
         outage_message = next_outage_message(session, None, state, timestamp)
         if outage_message:
-            message = f"{message}\n\n{outage_message}"
+            message = f"{message}\n{outage_message}"
         for chat in chats.values():
             await bot.send_message(chat.chat_id, message, message_thread_id=chat.thread_id)
             logger.warning("Notified %s: %s", chat.title or chat.chat_id, message.replace("\n", "↵"))
