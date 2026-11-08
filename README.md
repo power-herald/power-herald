@@ -281,6 +281,20 @@ outages:
 
 See `config.yaml` for all available options.
 
+### Outage Data Sources
+
+Set `outages.source` to `url` for an unauthenticated JSON URL, `file` for a local JSON file, or `api` for a GitHub-authenticated JSON URL. The default is `url`.
+
+```yaml
+outages:
+  source: "api"
+  json_api:
+    url: "https://raw.githubusercontent.com/OWNER/REPOSITORY/refs/heads/main/data/kyiv.json"
+    token: "github_pat_YOUR_TOKEN_HERE"
+```
+
+The API source sends `Authorization: token github_pat_YOUR_TOKEN_HERE`. Use a token with access to the repository and keep it out of version control. The endpoint must return the outage data as a JSON object.
+
 ---
 
 ## Usage

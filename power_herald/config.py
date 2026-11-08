@@ -190,13 +190,27 @@ class Config:
     @property
     def outage_data_source(self) -> str:
         source = self.get("outages.source", "url")
-        if source not in {"url", "file"}:
-            raise ValueError("outages.source must be either 'url' or 'file'")
+        if source not in {"url", "file", "api"}:
+            raise ValueError("outages.source must be 'url', 'file', or 'api'")
         return source
 
     @property
     def outage_json_file(self) -> str:
         return self.get("outages.json_file")
+
+    @property
+    def outage_json_api_url(self) -> str:
+        url = self.get("outages.json_api.url")
+        if not isinstance(url, str) or not url:
+            raise ValueError("outages.json_api.url must be a non-empty URL")
+        return url
+
+    @property
+    def outage_json_api_token(self) -> str:
+        token = self.get("outages.json_api.token")
+        if not isinstance(token, str) or not token.strip():
+            raise ValueError("outages.json_api.token must be a non-empty token")
+        return token
 
     @property
     def outage_update_delay(self) -> int:

@@ -19,12 +19,20 @@ def fetch_outage_data(
         response = requests.get(url or config.outage_json_url, timeout=30)
         response.raise_for_status()
         data = response.json()
+    elif selected_source == "api":
+        response = requests.get(
+            url or config.outage_json_api_url,
+            headers={"Authorization": f"token {config.outage_json_api_token}"},
+            timeout=30,
+        )
+        response.raise_for_status()
+        data = response.json()
     elif selected_source == "file":
         path = Path(file_path or config.outage_json_file)
         with path.open(encoding="utf-8") as outage_file:
             data = json.load(outage_file)
     else:
-        raise ValueError("source must be either 'url' or 'file'")
+        raise ValueError("source must be 'url', 'file', or 'api'")
     if not isinstance(data, dict):
         raise ValueError("outage data must be a JSON object")
     return data

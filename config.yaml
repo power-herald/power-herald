@@ -42,9 +42,12 @@ notifications:
   track_next_scheduled_outage: true
 
 outages:
-  source: "file"
+  source: file # url, file, or api
   json_url: "https://raw.githubusercontent.com/Baskerville42/outage-data-ua/refs/heads/main/data/kyiv.json"
   json_file: "./assets/kyiv-test.json"
+  json_api:
+    url: "https://raw.githubusercontent.com/power-herald/outage-data-ua/refs/heads/main/data/kyiv.json"
+    token: "github_pat_YOUR_TOKEN_HERE"
   delay: 30m
   schedule_send_time:
     today: "06:00" # Empty string, false, or comment out to disable sending today's outages notification
@@ -52,8 +55,8 @@ outages:
   statistic_send_time:
     weekly: "10:00" # Empty string, false, or comment out to disable the weekly outage statistics report (sent every Monday)
   gpvs:
-    - name: "Kyiv GPV 37.1"
-      id: "GPV37.1"
+    - name: "Kyiv GPV 38.1"
+      id: "GPV38.1"
 
 maintenance:
   default_enabled: false
