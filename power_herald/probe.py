@@ -36,8 +36,7 @@ async def ping_host(address: str, timeout_sec: int, method: PingMethod = PingMet
             connection = await asyncio.to_thread(
                 socket.create_connection, (endpoint.hostname, endpoint.port), timeout_sec
             )
-            with connection:
-                return True
+            return connection is not None
 
         # Default is HTTP GET requests.
         request_timeout = aiohttp.ClientTimeout(total=timeout_sec)
