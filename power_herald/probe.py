@@ -33,9 +33,12 @@ async def ping_host(address: str, timeout_sec: int, method: PingMethod = PingMet
             endpoint = urlsplit(address if "://" in address else f"//{address}")
             if endpoint.hostname is None or endpoint.port is None:
                 raise ValueError("TCP address must include a host and port")
-            connection = await asyncio.to_thread(
-                socket.create_connection, (endpoint.hostname, endpoint.port), timeout_sec
-            )
+            try:
+                connection = await asyncio.to_thread(
+                    socket.create_connection, (endpoint.hostname, endpoint.port), timeout_sec
+                )
+            except TimeoutError:
+                return False
             return connection is not None
 
         # Default is HTTP GET requests.
