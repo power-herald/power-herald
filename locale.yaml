@@ -64,6 +64,8 @@ notification:
   group:
     online: "✅ Світло з'явилось ({group_name})" # {group_description}
     offline: "❌ Світло зникло ({group_name})" # {group_description}
+    online_duration: "⏱ Не було {duration}"
+    offline_duration: "⏱ Було {duration}"
     online_source: "⏱ {source_name}: не було (невідомо)"
     offline_source: "⏱ {source_name}: було (невідомо)"
     source_online_duration: "⏱ {source_name}: не було {duration}"
