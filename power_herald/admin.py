@@ -10,6 +10,7 @@ from power_herald.models import Chat, PowerSource, MaintenanceMode, Subscription
 from power_herald.config import get_config
 from power_herald.messages import bot_greeting, get_message
 from power_herald.generator import set_generator_state
+from power_herald.state_store import latest_state
 
 config = get_config()
 engine = create_engine(config.db_url, **config.db_engine_options)
@@ -67,6 +68,24 @@ def chat_is_enabled(chat_id: int) -> bool:
 
 def chat_is_admin(chat_id: int) -> bool:
     return str(chat_id) in config.admin_chat_ids
+
+
+def _activation_requested_message(chat: Chat) -> str:
+    source = chat.source
+    if source is None:
+        return get_message(
+            "admin.activation_requested_without_source",
+            title=chat.title,
+            chat_id=chat.id,
+        )
+    return get_message(
+        "admin.activation_requested",
+        title=chat.title,
+        chat_id=chat.id,
+        source_id=chat.source_id,
+        source_name=source.name,
+    )
+
 
 def generator_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
@@ -133,10 +152,7 @@ async def activate_cmd(message: types.Message):
     session.commit()
     # Notify admin
     for admin_id in config.admin_chat_ids:
-        activation_message = get_message(
-            "admin.activation_requested", title=chat.title, chat_id=chat.id,
-            source_id=chat.source_id, source_name=chat.source.name
-        )
+        activation_message = _activation_requested_message(chat)
         await message.bot.send_message(admin_id, activation_message)
     response_message = get_message("admin.activation_request_sent")
     await message.answer(response_message)
@@ -371,13 +387,18 @@ async def generator_cmd(message: types.Message):
         type=PowerSourceType.MANUAL,
         enabled=True,
     ).first()
+    current_state = latest_state(session, source.id, stable_only=True) if source else None
     session.close()
     if not source:
         _log_command_warning(message, "/generator", "generator source not found or disabled")
         await message.answer(get_message("admin.error.generator_not_found"))
         return
     await message.answer(
-        get_message("generator.status", source_name=source.name),
+        get_message(
+            "admin.generator_status",
+            source_name=source.name,
+            status=current_state.state.value if current_state else "unknown",
+        ),
         reply_markup=generator_keyboard(),
     )
 

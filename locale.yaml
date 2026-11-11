@@ -19,6 +19,7 @@ admin:
     generator_not_found: "Generator source not found."
     schedule_update_failed: "Failed to update the outage schedule."
   activation_requested: "Activation requested for chat [{chat_id}] {title} for source [{source_id}] {source_name}."
+  activation_requested_without_source: "Activation requested for chat [{chat_id}] {title}."
   activation_request_sent: "Activation request sent to admin."
   chat_activated: "Chat [{chat_id}] {title} activated."
   chat_activated_for_user: "Your chat is now activated!"
