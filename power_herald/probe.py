@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import errno
 import logging
 import socket
 from urllib.parse import urlsplit
@@ -39,6 +40,10 @@ async def ping_host(address: str, timeout_sec: int, method: PingMethod = PingMet
                 )
             except TimeoutError:
                 return False
+            except OSError as error:
+                if error.errno == errno.EHOSTUNREACH:
+                    return False
+                raise
             return connection is not None
 
         # Default is HTTP GET requests.
