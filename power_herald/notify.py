@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from power_herald.models import Chat, Outage, Period, PowerGroup, PowerSource, StateChangeType, Subscription
 import os
 import datetime
-from power_herald.config import get_config
+from power_herald.config import get_config, round_duration_to_interval
 from power_herald.emergency import is_emergency
 from power_herald.outage_data import day_outages
 from power_herald.messages import (
@@ -69,16 +69,28 @@ async def notify_state_change(source_id: int, state: StateChangeType, timestamp:
         maintenance_window = None
         next_working_window = None
         if source.is_generator and source.generator is not None:
+            work_duration = datetime.timedelta(
+                seconds=round_duration_to_interval(
+                    source.generator.work_duration_minutes * 60,
+                    config.generator_rounding,
+                )
+            )
+            maintenance_duration = datetime.timedelta(
+                seconds=round_duration_to_interval(
+                    source.generator.maintenance_duration_minutes * 60,
+                    config.generator_rounding,
+                )
+            )
             if timestamp.tzinfo is None or timestamp.utcoffset() is None:
                 timestamp = timestamp.replace(tzinfo=config.timezone)
             else:
                 timestamp = timestamp.astimezone(config.timezone)
             if state == StateChangeType.ONLINE:
-                maint_start = timestamp + datetime.timedelta(minutes=source.generator.work_duration_minutes)
-                maint_end = maint_start + datetime.timedelta(minutes=source.generator.maintenance_duration_minutes)
+                maint_start = timestamp + work_duration
+                maint_end = maint_start + maintenance_duration
                 maintenance_window = (maint_start.strftime("%H:%M"), maint_end.strftime("%H:%M"))
             elif state == StateChangeType.OFFLINE:
-                work_start = timestamp + datetime.timedelta(minutes=source.generator.maintenance_duration_minutes)
+                work_start = timestamp + maintenance_duration
                 next_working_window = work_start.strftime("%H:%M")
 
         for sub in subs:

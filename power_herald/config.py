@@ -16,12 +16,18 @@ DEFAULT_CONFIG_PATH = os.environ.get("POWER_HERALD_CONFIG", "./config.yaml")
 
 def parse_duration(value: Any, key: str) -> int:
     if not isinstance(value, str):
-        raise ValueError(f"{key} must be a duration in whole minutes or seconds (for example, 5m or 10s)")
-    match = re.fullmatch(r"([1-9]\d*)([ms])", value)
+        raise ValueError(f"{key} must be a duration in whole hours, minutes, or seconds (for example, 1h, 5m, or 10s)")
+    match = re.fullmatch(r"([1-9]\d*)([smh])", value)
     if not match:
-        raise ValueError(f"{key} must be a duration in whole minutes or seconds (for example, 5m or 10s)")
+        raise ValueError(f"{key} must be a duration in whole hours, minutes, or seconds (for example, 1h, 5m, or 10s)")
     amount, unit = match.groups()
-    return int(amount) * (60 if unit == "m" else 1)
+    return int(amount) * {"s": 1, "m": 60, "h": 3600}[unit]
+
+
+def round_duration_to_interval(duration_seconds: int, interval_seconds: int) -> int:
+    if interval_seconds <= 0:
+        raise ValueError("interval_seconds must be positive")
+    return ((duration_seconds + interval_seconds // 2) // interval_seconds) * interval_seconds
 
 
 class Config:
@@ -215,6 +221,10 @@ class Config:
     @property
     def outage_update_delay(self) -> int:
         return parse_duration(self.get("outages.delay", "30m"), "outages.delay")
+
+    @property
+    def generator_rounding(self) -> int:
+        return parse_duration(self.get("generator.rounding", "10m"), "generator.rounding")
 
     @property
     def outage_schedule_send_time_tomorrow(self) -> dt.time | None:
