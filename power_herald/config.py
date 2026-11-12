@@ -24,10 +24,18 @@ def parse_duration(value: Any, key: str) -> int:
     return int(amount) * {"s": 1, "m": 60, "h": 3600}[unit]
 
 
-def round_duration_to_interval(duration_seconds: int, interval_seconds: int) -> int:
+def round_datetime_to_interval(value: dt.datetime, interval_seconds: int) -> dt.datetime:
     if interval_seconds <= 0:
         raise ValueError("interval_seconds must be positive")
-    return ((duration_seconds + interval_seconds // 2) // interval_seconds) * interval_seconds
+    interval_microseconds = interval_seconds * 1_000_000
+    elapsed_microseconds = (
+        (value.hour * 3600 + value.minute * 60 + value.second) * 1_000_000 + value.microsecond
+    )
+    rounded_microseconds = (
+        (elapsed_microseconds + interval_microseconds // 2) // interval_microseconds
+    ) * interval_microseconds
+    midnight = value.replace(hour=0, minute=0, second=0, microsecond=0)
+    return midnight + dt.timedelta(microseconds=rounded_microseconds)
 
 
 class Config:

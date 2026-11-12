@@ -283,9 +283,9 @@ outages:
 See `config.yaml` for all available options.
 
 Set `generator.rounding` to a duration such as `10m` (default), `30m`, or `1h`
-to round generator work and maintenance windows to the nearest interval before
-they are included in notifications. Durations use integer `s`, `m`, or `h`
-units.
+to round calculated generator event times (maintenance start/end and next
+working time) to the nearest interval before they are included in notifications.
+Durations use integer `s`, `m`, or `h` units.
 
 The optional `district` aliases are matched case-insensitively against the outage feed's emergency district text. A global emergency or a matching district triggers the same alert as `/emergency`; an all-clear is sent when no configured group remains affected. Schedules are suppressed for affected groups. Automatic alerts do not change manual emergency mode.
 
