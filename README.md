@@ -41,7 +41,7 @@ placeholder names intact when customizing a message.
 - **Smart notifications**: Includes state changes, outage durations, and generator maintenance schedules
 - **Per-chat subscriptions**: Different buildings/groups can subscribe to specific power sources
 - **Admin controls**: Manual activation approval, maintenance mode management, generator event configuration
-- **Scheduled outages**: Daily posting of outage schedules (third-party source, aggregated from Yasno/DTEK)
+- **Scheduled outages**: Daily posting of outage schedules (third-party source, aggregated from Yasno/DTEK); see [notification types and de-duplication](docs/outage-notifications.md)
 - **Weekly outage statistics**: Monday reports based on recorded `periods`, with two-hour power-state charts and weekly outage totals
 - **Database persistence**: ORM-based MariaDB/MySQL or SQLite storage of state changes, outages, and subscriptions
 - **OpenRC integration**: Systemd-free daemon management for Gentoo Linux

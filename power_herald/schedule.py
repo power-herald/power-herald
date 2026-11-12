@@ -6,7 +6,7 @@ from typing import Any
 
 from aiogram import Bot
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from power_herald.config import get_config
 from power_herald.emergency import broadcast_emergency, is_emergency
@@ -44,6 +44,19 @@ def _daily_schedule_hash(messages: dict[str, dict[str, Any]], date: dt.date) -> 
         }
         for name, message in messages.items()
     })
+
+
+def _latest_notification(
+    session: Session,
+    notification_type: OutageNotificationType,
+    target_date: dt.date,
+) -> OutageNotification | None:
+    return (
+        session.query(OutageNotification)
+        .filter_by(type=notification_type, posted_for=target_date)
+        .order_by(OutageNotification.posted_at.desc(), OutageNotification.id.desc())
+        .first()
+    )
 
 
 async def update_once(force: bool = False) -> bool:
@@ -89,14 +102,22 @@ async def update_once(force: bool = False) -> bool:
             else:
                 session.add(Outage(name=name, message_hash=current_message_hash, message=message))
             changed_messages.append(message)
-        latest_notification = (
-            session.query(OutageNotification)
-            .filter_by(posted_for=today)
-            .order_by(OutageNotification.posted_at.desc(), OutageNotification.id.desc())
-            .first()
-        )
-        if (latest_notification and latest_notification.schedule_hash == schedule_hash
-            and previous_emergency == current_emergency):
+        latest_notifications = [
+            _latest_notification(session, notification_type, today)
+            for notification_type in (
+                OutageNotificationType.IMMEDIATE,
+                # Yesterday's TOMORROW notice is stored for today's target date.
+                OutageNotificationType.TOMORROW,
+                OutageNotificationType.TODAY,
+            )
+        ]
+        if (
+            any(
+                notification and notification.schedule_hash == schedule_hash
+                for notification in latest_notifications
+            )
+            and previous_emergency == current_emergency
+        ):
             changed_messages = []
         session.commit()
         logger.info(
@@ -153,13 +174,17 @@ async def send_schedule_once(
         if notification_type is OutageNotificationType.TODAY and not has_offline_periods(messages, target_date):
             logger.info("No offline periods in today's outage data; skipping outage schedule")
             return False
-        latest_notification = (
-            session.query(OutageNotification)
-            .filter_by(posted_for=target_date)
-            .order_by(OutageNotification.posted_at.desc(), OutageNotification.id.desc())
-            .first()
-        )
-        if latest_notification and latest_notification.schedule_hash == schedule_hash:
+        notification_types = [notification_type]
+        if notification_type is OutageNotificationType.TODAY:
+            notification_types.append(OutageNotificationType.IMMEDIATE)
+        latest_notifications = [
+            _latest_notification(session, candidate_type, target_date)
+            for candidate_type in notification_types
+        ]
+        if any(
+            notification and notification.schedule_hash == schedule_hash
+            for notification in latest_notifications
+        ):
             logger.info("Outage schedule for %s was already sent with the latest hash", target_date)
             return False
         messages = list(messages.values())

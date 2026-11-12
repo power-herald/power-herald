@@ -90,6 +90,85 @@ class StabilizingTests(unittest.TestCase):
 
 
 class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
+    async def test_update_checks_tomorrow_hash_even_when_immediate_is_newer(self):
+        engine = create_engine("sqlite://")
+        self.addCleanup(engine.dispose)
+        config = Mock(
+            db_url="sqlite://", db_engine_options={}, outage_data_source="file", bot_token="token",
+            gpvs=[{"id": "1", "name": "first"}],
+        )
+        config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
+        messages = [
+            {"first": {
+                "name": "first", "emergency": False,
+                "sunday": [{"start": "00:00", "end": "04:00", "status": "offline"}],
+            }},
+            {"first": {
+                "name": "first", "emergency": False,
+                "sunday": [{"start": "04:00", "end": "08:00", "status": "offline"}],
+            }},
+        ]
+        with patch("power_herald.schedule.config", config), patch(
+            "power_herald.schedule.create_engine", return_value=engine
+        ), patch("power_herald.schedule.is_emergency", return_value=False), patch(
+            "power_herald.schedule.fetch_outage_data",
+            side_effect=[{"revision": 1}, {"revision": 2}, {"revision": 3}],
+        ), patch(
+            "power_herald.schedule.prepare_messages", side_effect=[messages[0], messages[1], messages[0]]
+        ), patch("power_herald.schedule.send_messages", new_callable=AsyncMock) as send:
+            await update_once()
+            await update_once()
+            with sessionmaker(bind=engine)() as session:
+                first_notification = (
+                    session.query(OutageNotification)
+                    .order_by(OutageNotification.id)
+                    .first()
+                )
+                first_notification.type = OutageNotificationType.TOMORROW
+                first_notification.posted_at = config.now() - dt.timedelta(days=1)
+                session.commit()
+            await update_once()
+
+        self.assertEqual([call.args[1] for call in send.await_args_list], [
+            [messages[0]["first"]],
+            [messages[1]["first"]],
+            [],
+        ])
+
+    async def test_today_schedule_skips_hash_already_sent_as_immediate(self):
+        engine = create_engine("sqlite://")
+        self.addCleanup(engine.dispose)
+        config = Mock(
+            db_url="sqlite://", db_engine_options={}, outage_data_source="file", bot_token="token",
+            gpvs=[{"id": "1", "name": "first"}],
+        )
+        config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
+        messages = {"first": {
+            "name": "first", "emergency": False,
+            "sunday": [{"start": "00:00", "end": "04:00", "status": "offline"}],
+        }}
+        with patch("power_herald.schedule.config", config), patch(
+            "power_herald.schedule.create_engine", return_value=engine
+        ), patch("power_herald.schedule.is_emergency", return_value=False), patch(
+            "power_herald.schedule.fetch_outage_data", return_value={"revision": 1}
+        ), patch("power_herald.schedule.prepare_messages", return_value=messages), patch(
+            "power_herald.schedule.send_messages", new_callable=AsyncMock
+        ) as send:
+            await update_once()
+            send.reset_mock()
+            with sessionmaker(bind=engine)() as session:
+                session.add(
+                    OutageNotification(
+                        posted_at=config.now() + dt.timedelta(minutes=1),
+                        type=OutageNotificationType.TODAY,
+                        posted_for=config.now().date(),
+                        schedule_hash="different-hash",
+                    )
+                )
+                session.commit()
+            self.assertFalse(await send_schedule_once(OutageNotificationType.TODAY, config.now().date()))
+            send.assert_not_awaited()
+
     async def test_update_notification_hash_uses_only_todays_schedule(self):
         engine = create_engine("sqlite://")
         self.addCleanup(engine.dispose)
@@ -226,7 +305,7 @@ class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
             await update_once()
             self.assertEqual([message["name"] for message in send.await_args.args[1]], ["first"])
 
-    async def test_partial_emergency_timed_schedule_hashes_target_day(self):
+    async def test_partial_emergency_tomorrow_hash_is_target_day_scoped(self):
         engine = create_engine("sqlite://")
         self.addCleanup(engine.dispose)
         config = Mock(
@@ -248,11 +327,11 @@ class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
             "power_herald.schedule.broadcast_emergency", new_callable=AsyncMock
         ), patch("power_herald.schedule.send_messages", new_callable=AsyncMock) as send:
             await update_once()
-            send.reset_mock()
-            self.assertFalse(await send_schedule_once(OutageNotificationType.TOMORROW, dt.date(2026, 11, 8)))
-            send.assert_not_awaited()
             self.assertTrue(await send_schedule_once(OutageNotificationType.TOMORROW, dt.date(2026, 11, 9)))
             self.assertEqual([message["name"] for message in send.await_args.args[1]], ["second"])
+            send.reset_mock()
+            self.assertFalse(await send_schedule_once(OutageNotificationType.TOMORROW, dt.date(2026, 11, 9)))
+            send.assert_not_awaited()
 
     async def test_broadcast_uses_manual_alert_and_enabled_chats(self):
         engine = create_engine("sqlite://")
