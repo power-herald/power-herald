@@ -126,13 +126,20 @@ def generator_state_change_message(
     duration: datetime.timedelta | None = None,
     maintenance_window: tuple[str, str] | None = None,
     next_working_window: str | None = None,
+    maintenance_duration: datetime.timedelta | None = None,
 ) -> str:
     state_key = state.lower()
-    message_key = f"notification.generator.{state_key}"
+    message_state_key = "paused" if maintenance_duration is not None else state_key
+    message_key = f"notification.generator.{message_state_key}"
     parts = [get_message(message_key, source_name=source_name, state=state.upper(), source_description=source_description or "")]
     if duration and state_key == "offline":
         duration_key = f"notification.generator.{state_key}_duration"
         parts.append(get_message(duration_key, duration=format_duration(duration)))
+    if maintenance_duration is not None:
+        parts.append(get_message(
+            "notification.generator.maintenance_duration",
+            duration=format_duration(maintenance_duration),
+        ))
     if maintenance_window:
         parts.append(get_message(
             "notification.generator.maintenance_window",

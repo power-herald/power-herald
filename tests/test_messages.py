@@ -1,7 +1,30 @@
 import datetime as dt
 import unittest
 
-from power_herald.messages import group_state_change_message
+from power_herald.messages import generator_state_change_message, group_state_change_message
+
+
+class GeneratorStateChangeMessageTests(unittest.TestCase):
+    def test_pause_includes_maintenance_duration_and_end_time(self):
+        message = generator_state_change_message(
+            "generator",
+            None,
+            "offline",
+            maintenance_duration=dt.timedelta(minutes=90),
+            next_working_window="12:30",
+        )
+
+        self.assertEqual(
+            message,
+            "⏸ Генератор призупинено (generator)\n"
+            "⏱ Технічна перерва: 1 год. 30 хв.\n"
+            "⏱ Кінець технічної перерви 12:30",
+        )
+
+    def test_stop_does_not_mention_maintenance(self):
+        message = generator_state_change_message("generator", None, "offline")
+
+        self.assertEqual(message, "⚠️ Генератор зупинено (generator)")
 
 
 class GroupStateChangeMessageTests(unittest.TestCase):

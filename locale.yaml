@@ -45,8 +45,10 @@ duration:
 
 generator:
   start_button: "▶ Генератор запущено"
+  pause_button: "⏸ Пауза генератора"
   stop_button: "⏹ Генератор зупинено"
   started: "▶ Генератор {source_name} запущено."
+  paused: "⏸ Генератор {source_name} призупинено."
   stopped: "⏹ Генератор {source_name} зупинено."
   already_in_state: "Генератор {source_name} вже {state}."
 
@@ -59,7 +61,9 @@ notification:
   generator:
     online: "⚠️ Запущено генератор ({source_name})"
     offline: "⚠️ Генератор зупинено ({source_name})"
+    paused: "⏸ Генератор призупинено ({source_name})"
     offline_duration: "⏱ Працював: {duration}"
+    maintenance_duration: "⏱ Технічна перерва: {duration}"
     maintenance_window: "⏱ Технічна перерва {start} - {end}"
     next_working_window: "⏱ Кінець технічної перерви {start}"
   group:

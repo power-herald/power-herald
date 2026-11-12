@@ -15,7 +15,11 @@ logging.getLogger("aiohttp.access").setLevel(logging.WARNING)
 engine = create_engine(config.db_url, **config.db_engine_options)
 Session = sessionmaker(bind=engine)
 
-async def set_generator_state(source_id: int, state: StateChangeType) -> bool:
+async def set_generator_state(
+    source_id: int,
+    state: StateChangeType,
+    maintenance_pause: bool = False,
+) -> bool:
     """Change a generator state and notify subscribed chats."""
     session = Session()
     source = session.query(PowerSource).filter_by(
@@ -35,7 +39,7 @@ async def set_generator_state(source_id: int, state: StateChangeType) -> bool:
         session.commit()
         logger.warning("Generator %s state changed to %s", source.name, state.value)
         session.close()
-        await notify_state_change(source.id, state, timestamp)
+        await notify_state_change(source.id, state, timestamp, maintenance_pause=maintenance_pause)
         return True
     
     session.close()

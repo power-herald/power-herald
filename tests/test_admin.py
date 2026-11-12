@@ -2,7 +2,13 @@ import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
 with patch("sqlalchemy.create_engine"), patch("aiogram.Bot"):
-    from power_herald.admin import _activation_requested_message, generator_cmd
+    from power_herald.admin import (
+        _activation_requested_message,
+        generator_cmd,
+        pause_generator_cmd,
+        start_generator_cmd,
+        stop_generator_cmd,
+    )
 from power_herald.messages import get_message
 from power_herald.models import Chat, PowerSource, PowerSourceType, StateChangeType
 
@@ -81,3 +87,33 @@ class GeneratorCommandTests(unittest.IsolatedAsyncioTestCase):
             ),
             reply_markup=keyboard,
         )
+
+
+class GeneratorControlHandlerTests(unittest.IsolatedAsyncioTestCase):
+    async def _invoke_handler(self, handler):
+        message = Mock()
+        with (
+            patch("power_herald.admin._generator_state_cmd", new_callable=AsyncMock) as state_cmd,
+            patch("power_herald.admin._log_command"),
+        ):
+            await handler(message)
+        return state_cmd, message
+
+    async def test_start_keeps_online_behavior(self):
+        state_cmd, message = await self._invoke_handler(start_generator_cmd)
+
+        state_cmd.assert_awaited_once_with(message, StateChangeType.ONLINE)
+
+    async def test_pause_requests_maintenance_pause(self):
+        state_cmd, message = await self._invoke_handler(pause_generator_cmd)
+
+        state_cmd.assert_awaited_once_with(
+            message,
+            StateChangeType.OFFLINE,
+            maintenance_pause=True,
+        )
+
+    async def test_stop_requests_offline_without_maintenance_pause(self):
+        state_cmd, message = await self._invoke_handler(stop_generator_cmd)
+
+        state_cmd.assert_awaited_once_with(message, StateChangeType.OFFLINE)

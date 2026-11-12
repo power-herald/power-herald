@@ -59,7 +59,12 @@ def next_outage_message(
     return None
 
 
-async def notify_state_change(source_id: int, state: StateChangeType, timestamp: datetime.datetime):
+async def notify_state_change(
+    source_id: int,
+    state: StateChangeType,
+    timestamp: datetime.datetime,
+    maintenance_pause: bool = False,
+):
     session = Session()
     try:
         source = session.query(PowerSource).get(source_id)
@@ -68,6 +73,7 @@ async def notify_state_change(source_id: int, state: StateChangeType, timestamp:
         subs = session.query(Subscription).filter_by(source_id=source.id, enabled=True).all()
         maintenance_window = None
         next_working_window = None
+        maintenance_duration = None
         if source.is_generator and source.generator is not None:
             if timestamp.tzinfo is None or timestamp.utcoffset() is None:
                 timestamp = timestamp.replace(tzinfo=config.timezone)
@@ -86,9 +92,12 @@ async def notify_state_change(source_id: int, state: StateChangeType, timestamp:
                     config.generator_rounding,
                 )
                 maintenance_window = (maint_start.strftime("%H:%M"), maint_end.strftime("%H:%M"))
-            elif state == StateChangeType.OFFLINE:
+            elif state == StateChangeType.OFFLINE and maintenance_pause:
+                maintenance_duration = datetime.timedelta(
+                    minutes=source.generator.maintenance_duration_minutes
+                )
                 work_start = round_datetime_to_interval(
-                    timestamp + datetime.timedelta(minutes=source.generator.maintenance_duration_minutes),
+                    timestamp + maintenance_duration,
                     config.generator_rounding,
                 )
                 next_working_window = work_start.strftime("%H:%M")
@@ -106,7 +115,13 @@ async def notify_state_change(source_id: int, state: StateChangeType, timestamp:
                 msg = state_change_message(source.name, source.description, state.value, duration)
             else:
                 msg = generator_state_change_message(
-                    source.name, source.description, state.value, duration, maintenance_window, next_working_window
+                    source.name,
+                    source.description,
+                    state.value,
+                    duration,
+                    maintenance_window,
+                    next_working_window,
+                    maintenance_duration,
                 )
             outage_message = next_outage_message(session, source, state, timestamp)
             if outage_message:

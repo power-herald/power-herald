@@ -46,7 +46,7 @@ async def configure_command_menu() -> None:
         BotCommand(command="activate", description="Request chat activation"),
     ]
     activated_user_commands = [
-        BotCommand(command="generator", description="Start or stop Generator"),
+        BotCommand(command="generator", description="Start, pause, or stop Generator"),
     ]
     admin_commands = activated_user_commands + [
         BotCommand(command="approve", description="Approve a chat activation"),

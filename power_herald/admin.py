@@ -91,6 +91,7 @@ def generator_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text=get_message("generator.start_button"))],
+            [KeyboardButton(text=get_message("generator.pause_button"))],
             [KeyboardButton(text=get_message("generator.stop_button"))],
         ],
         resize_keyboard=True,
@@ -403,8 +404,17 @@ async def generator_cmd(message: types.Message):
     )
 
 
-async def _generator_state_cmd(message: types.Message, state: StateChangeType):
-    command = "/generator start" if state == StateChangeType.ONLINE else "/generator stop"
+async def _generator_state_cmd(
+    message: types.Message,
+    state: StateChangeType,
+    maintenance_pause: bool = False,
+):
+    if maintenance_pause:
+        command = "/generator pause"
+    elif state == StateChangeType.ONLINE:
+        command = "/generator start"
+    else:
+        command = "/generator stop"
     session = Session()
     chat = session.query(Chat).filter_by(chat_id=str(message.chat.id), enabled=True).first()
     source = session.query(PowerSource).filter_by(
@@ -418,8 +428,13 @@ async def _generator_state_cmd(message: types.Message, state: StateChangeType):
         response_message = get_message("admin.error.not_authorized") if not chat else get_message("admin.error.generator_not_found")
         await message.answer(response_message)
         return
-    changed = await set_generator_state(source.id, state)
-    status_key = "generator.started" if state == StateChangeType.ONLINE else "generator.stopped"
+    changed = await set_generator_state(source.id, state, maintenance_pause=maintenance_pause)
+    if state == StateChangeType.ONLINE:
+        status_key = "generator.started"
+    elif maintenance_pause:
+        status_key = "generator.paused"
+    else:
+        status_key = "generator.stopped"
     status = get_message(status_key, source_name=source.name) if changed else get_message(
         "generator.already_in_state", source_name=source.name, state=state.value
     )
@@ -430,6 +445,12 @@ async def _generator_state_cmd(message: types.Message, state: StateChangeType):
 async def start_generator_cmd(message: types.Message):
     _log_command(message, "/generator start")
     await _generator_state_cmd(message, StateChangeType.ONLINE)
+
+
+@router.message(F.text == get_message("generator.pause_button"))
+async def pause_generator_cmd(message: types.Message):
+    _log_command(message, "/generator pause")
+    await _generator_state_cmd(message, StateChangeType.OFFLINE, maintenance_pause=True)
 
 
 @router.message(F.text == get_message("generator.stop_button"))
