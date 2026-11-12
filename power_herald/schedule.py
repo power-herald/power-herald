@@ -2,6 +2,7 @@ import asyncio
 import datetime as dt
 import logging
 import math
+from typing import Any
 
 from aiogram import Bot
 from sqlalchemy import create_engine
@@ -23,6 +24,7 @@ from power_herald.outage_data import (
     day_outages,
     fetch_outage_data,
     has_offline_periods,
+    is_unspecified,
     message_hash,
     prepare_messages,
 )
@@ -31,6 +33,18 @@ from power_herald.weekly_stats import send_weekly_statistics_once
 
 config = get_config()
 logger = logging.getLogger("schedule")
+
+
+def _daily_schedule_hash(messages: dict[str, dict[str, Any]], date: dt.date) -> str:
+    return content_hash({
+        name: {
+            "emergency": message["emergency"],
+            "outages": day_outages(message, date),
+            "unspecified": is_unspecified(message, date),
+        }
+        for name, message in messages.items()
+    })
+
 
 async def update_once(force: bool = False) -> bool:
     if is_emergency():
@@ -44,7 +58,7 @@ async def update_once(force: bool = False) -> bool:
     current_hash = content_hash(data)
     logger.debug("Fetched outage data with content hash %s", current_hash)
     prepared_messages = prepare_messages(data, config.gpvs)
-    schedule_hash = content_hash(prepared_messages)
+    schedule_hash = _daily_schedule_hash(prepared_messages, today)
     changed_messages: list[dict] = []
     previous_emergency = False
     current_emergency = any(message["emergency"] for message in prepared_messages.values())
@@ -128,7 +142,7 @@ async def send_schedule_once(
             logger.info("No outage data available; skipping %s outage schedule", notification_type.value)
             return False
         prepared_messages = prepare_messages(latest.json, config.gpvs)
-        schedule_hash = content_hash(prepared_messages)
+        schedule_hash = _daily_schedule_hash(prepared_messages, target_date)
         messages = {
             name: message for name, message in prepared_messages.items()
             if not message["emergency"]
