@@ -154,14 +154,18 @@ def group_state_change_message(
     message_key = f"notification.group.{state_key}"
     parts = [get_message(message_key, group_name=group_name, state=state.upper(), group_description=group_description or "")]
     durations = [duration for _, duration in source_durations]
-    common_duration = durations[0] if durations else None
+    minute = datetime.timedelta(minutes=1)
+    common_duration_minutes = durations[0] // minute if durations and durations[0] is not None else None
     if (
         len(durations) > 1
-        and common_duration is not None
-        and all(duration == common_duration for duration in durations)
+        and common_duration_minutes is not None
+        and all(duration is not None and duration // minute == common_duration_minutes for duration in durations)
     ):
         message_key = f"notification.group.{state_key}_duration"
-        parts.append(get_message(message_key, duration=format_duration(common_duration)))
+        parts.append(get_message(
+            message_key,
+            duration=format_duration(datetime.timedelta(minutes=common_duration_minutes)),
+        ))
         return "\n".join(parts)
 
     for source_name, duration in source_durations:

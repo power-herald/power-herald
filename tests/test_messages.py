@@ -15,6 +15,19 @@ class GroupStateChangeMessageTests(unittest.TestCase):
 
         self.assertEqual(message, "❌ Світло зникло (group)\n⏱ Було 2 год.")
 
+    def test_durations_with_same_minute_period_are_reported_once(self):
+        message = group_state_change_message(
+            "group",
+            None,
+            "offline",
+            [
+                ("first", dt.timedelta(minutes=1, seconds=10)),
+                ("second", dt.timedelta(minutes=1, seconds=59)),
+            ],
+        )
+
+        self.assertEqual(message, "❌ Світло зникло (group)\n⏱ Було 1 хв.")
+
     def test_different_durations_are_reported_per_source(self):
         message = group_state_change_message(
             "group",
