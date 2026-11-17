@@ -17,6 +17,7 @@ from power_herald.models import (
     ActiveSource,
     Chat,
     Emergency,
+    EmergencyNotification,
     GeneratorSource,
     MaintenanceMode,
     Period,
@@ -170,6 +171,14 @@ def build_parser() -> argparse.ArgumentParser:
     notifications.add_argument("--to", dest="to_time", type=parse_datetime)
     notifications.add_argument("--json", action="store_true")
 
+    emergency_notifications = commands.add_parser(
+        "emergency-notifications", help="list automatic emergency notifications"
+    )
+    emergency_notifications.add_argument("--state", type=int, choices=(0, 1))
+    emergency_notifications.add_argument("--from", dest="from_time", type=parse_datetime)
+    emergency_notifications.add_argument("--to", dest="to_time", type=parse_datetime)
+    emergency_notifications.add_argument("--json", action="store_true")
+
     emergencies = commands.add_parser("emergencies", help="list emergency mode records")
     emergencies.add_argument("--enabled", type=int, choices=(0, 1))
     emergencies.add_argument("--from", dest="from_time", type=parse_datetime)
@@ -299,9 +308,11 @@ def list_notifications(session: Session, model: Any, arguments: argparse.Namespa
         query = query.filter(model.type == arguments.type)
     if model is OutageNotification and arguments.posted_for is not None:
         query = query.filter(model.posted_for == arguments.posted_for)
+    if model is EmergencyNotification and arguments.state is not None:
+        query = query.filter(model.state == bool(arguments.state))
     if hasattr(arguments, "source_id") and arguments.source_id is not None:
         query = query.filter(model.source_id == arguments.source_id)
-    time_column = OutageNotification.posted_at if model is OutageNotification else WeeklyStatisticsNotification.sent_at
+    time_column = WeeklyStatisticsNotification.sent_at if model is WeeklyStatisticsNotification else model.posted_at
     if arguments.from_time is not None:
         query = query.filter(time_column >= arguments.from_time)
     if arguments.to_time is not None:
@@ -377,6 +388,7 @@ def run(arguments: argparse.Namespace) -> int:
             history_models = {"power-states": SourceState, "state-changes": StateChange,
                               "outage-periods": Period}
             notification_models = {"outage-notifications": OutageNotification,
+                                   "emergency-notifications": EmergencyNotification,
                                    "weekly-notifications": WeeklyStatisticsNotification}
             if arguments.command in history_models:
                 output(list_history(session, history_models[arguments.command], arguments), arguments.json)

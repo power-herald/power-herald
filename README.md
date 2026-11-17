@@ -233,6 +233,7 @@ Set `POWER_HERALD_CONFIG` when mounting the configuration at a different path.
 ./ph-cli state-changes --from 2026-01-01T00:00:00Z --to 2026-01-31T23:59:59Z
 ./ph-cli outage-periods --source-id 1 --json
 ./ph-cli outage-notifications --posted-for 2026-01-01 --json
+./ph-cli emergency-notifications --state 1 --json
 ./ph-cli emergencies --enabled 1
 ```
 
@@ -250,6 +251,8 @@ changes, and outage periods are list-only and support
 `--from`, `--to`, and `--json`; its records include the notification type,
 related date, and schedule hash. `immediate` records are created when an
 updated schedule is posted, while `today` and `tomorrow` record scheduled posts.
+`emergency-notifications` lists automatic emergency broadcast attempts and supports
+`--state` (0 or 1), `--from`, `--to`, and `--json`.
 
 **OpenRC installation** (see OPENRC_SETUP.md): the ebuild installs the init
 script automatically; just enable and start it:
@@ -308,6 +311,10 @@ emergency district text. A global emergency or matching district triggers the
 same alert as `/emergency`; an all-clear is sent when no group remains affected.
 Schedules are suppressed for affected groups. Automatic alerts do not change
 manual emergency mode. Changes to database groups take effect on the next run.
+Automatic alerts use the latest `emergency_notifications` record as their
+previous state; with no record, the previous state is assumed to be clear.
+Existing installations may therefore receive a fresh alert when the table is
+first created while an emergency is active.
 
 ### Outage Data Sources
 
@@ -403,6 +410,7 @@ entry points, for example `venv/bin/python -m power_herald.bot` or
 - `periods` - Online/offline source state periods with start/stop timestamps
 - `outage_groups` - Hourly outage groups, feed IDs, and emergency district aliases
 - `outage_notifications` - Schedule notification history, deduplicated by related date and schedule hash across notification types
+- `emergency_notifications` - Automatic emergency broadcast history and previous state
 - `weekly_statistics_notifications` - Deduplication records for weekly statistics reports
 - `chats` - Telegram chats subscribed to service, with an optional outage group
 - `subscriptions` - Chat-to-source mappings

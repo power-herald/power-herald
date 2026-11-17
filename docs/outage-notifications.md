@@ -78,6 +78,13 @@ A notification record is added after a non-empty schedule batch is passed to
 `send_messages`. Emergency broadcasts are handled separately from these
 schedule notification records.
 
+Automatic emergency transitions are tracked in `emergency_notifications`, with
+`posted_at` and boolean `state`. The latest record by ID is the previous state;
+without one, it is clear. A record is added after the broadcast attempt returns,
+and individual chat failures are logged by the broadcaster. Manual emergency
+broadcasts do not change this history. On an existing installation, the first
+check may send a fresh alert if an emergency is active.
+
 ## Sending conditions
 
 - A schedule is sent only to enabled chats assigned to its outage group.

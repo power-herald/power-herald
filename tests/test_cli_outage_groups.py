@@ -6,10 +6,39 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 from power_herald.cli import main
+from power_herald.models import EmergencyNotification
 
 
 class OutageGroupCliTests(unittest.TestCase):
+    def test_emergency_notification_history_filters(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db_url = f"sqlite:///{Path(directory) / 'test.db'}"
+            stdout = io.StringIO()
+            with patch("sys.argv", ["ph-cli", "--db-url", db_url, "db", "restore"]), \
+                    contextlib.redirect_stdout(stdout):
+                self.assertEqual(main(), 0)
+            engine = create_engine(db_url)
+            self.addCleanup(engine.dispose)
+            with sessionmaker(bind=engine)() as session:
+                session.add_all([
+                    EmergencyNotification(state=True),
+                    EmergencyNotification(state=False),
+                ])
+                session.commit()
+            stdout = io.StringIO()
+            with patch("sys.argv", [
+                "ph-cli", "--db-url", db_url, "emergency-notifications", "--state", "1", "--json"
+            ]), contextlib.redirect_stdout(stdout):
+                self.assertEqual(main(), 0)
+            records = json.loads(stdout.getvalue())
+            self.assertEqual(len(records), 1)
+            self.assertEqual(set(records[0]), {"id", "posted_at", "state"})
+            self.assertTrue(records[0]["state"])
+
     def test_crud_and_district_validation(self):
         with tempfile.TemporaryDirectory() as directory:
             db_url = f"sqlite:///{Path(directory) / 'test.db'}"

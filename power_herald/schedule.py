@@ -14,6 +14,7 @@ from power_herald.messages import schedule_message_from_json
 from power_herald.models import (
     Base,
     Chat,
+    EmergencyNotification,
     Outage,
     OutageData,
     OutageGroup,
@@ -72,12 +73,15 @@ async def update_once(force: bool = False) -> bool:
     current_hash = content_hash(data)
     logger.debug("Fetched outage data with content hash %s", current_hash)
     changed_messages: list[dict] = []
-    previous_emergency = False
     with sessionmaker(bind=engine)() as session:
         groups = session.query(OutageGroup).order_by(OutageGroup.id).all()
         prepared_messages = prepare_messages(data, groups)
         schedule_hash = _daily_schedule_hash(prepared_messages, today)
         current_emergency = any(message["emergency"] for message in prepared_messages.values())
+        latest_emergency = session.query(EmergencyNotification).order_by(
+            EmergencyNotification.id.desc()
+        ).first()
+        previous_emergency = latest_emergency.state if latest_emergency else False
         previous = session.query(OutageData).order_by(OutageData.id.desc()).first()
         if previous and previous.content_hash == current_hash:
             logger.info("Outage data content is unchanged")
@@ -96,8 +100,6 @@ async def update_once(force: bool = False) -> bool:
             outage_count += len(day_outages(message, today))
             current_message_hash = message_hash(message)
             latest = session.query(Outage).filter_by(name=name).order_by(Outage.id.desc()).first()
-            if latest and latest.message.get("emergency", False):
-                previous_emergency = True
             if latest and latest.message_hash == current_message_hash:
                 if not force:
                     continue
@@ -132,6 +134,9 @@ async def update_once(force: bool = False) -> bool:
         bot = Bot(token=config.bot_token)
         try:
             await broadcast_emergency(bot, current_emergency)
+            with sessionmaker(bind=engine)() as session:
+                session.add(EmergencyNotification(posted_at=config.now(), state=current_emergency))
+                session.commit()
         finally:
             await bot.session.close()
     schedule_messages = [message for message in changed_messages if not message["emergency"]]

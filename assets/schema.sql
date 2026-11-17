@@ -179,6 +179,13 @@ CREATE TABLE IF NOT EXISTS outage_notifications (
     KEY ix_outage_notifications_posted_for_hash (posted_for, schedule_hash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS emergency_notifications (
+    id INT NOT NULL AUTO_INCREMENT,
+    posted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    state BOOLEAN NOT NULL,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS weekly_statistics_notifications (
     id INT NOT NULL AUTO_INCREMENT,
     source_id INT NOT NULL,

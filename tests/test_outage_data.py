@@ -11,7 +11,10 @@ from sqlalchemy.orm import sessionmaker
 from power_herald.config import Config
 from power_herald.emergency import broadcast_emergency
 from power_herald.messages import get_message, schedule_message_from_json
-from power_herald.models import Base, Chat, OutageGroup, OutageNotification, OutageNotificationType
+from power_herald.models import (
+    Base, Chat, EmergencyNotification, Outage, OutageGroup, OutageNotification,
+    OutageNotificationType,
+)
 from power_herald.outage_data import (
     WEEKDAYS,
     fetch_outage_data,
@@ -364,6 +367,60 @@ class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(
                 [message["name"] for message in send.await_args_list[5].args[1]], ["first", "second"]
             )
+        with sessionmaker(bind=engine)() as session:
+            records = session.query(EmergencyNotification).order_by(EmergencyNotification.id).all()
+            self.assertEqual([record.state for record in records], [True, False])
+            self.assertEqual([record.posted_at for record in records], [now.replace(tzinfo=None)] * 2)
+
+    async def test_removed_emergency_group_still_broadcasts_all_clear(self):
+        engine = create_engine("sqlite://")
+        self.addCleanup(engine.dispose)
+        self.seed_groups(engine, [OutageGroup(external_id="1", name="first", districts=[])])
+        config = Mock(db_url="sqlite://", db_engine_options={}, outage_data_source="file", bot_token="token")
+        config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
+        bot = Mock()
+        bot.session.close = AsyncMock()
+        with patch("power_herald.schedule.config", config), patch(
+            "power_herald.schedule.create_engine", return_value=engine
+        ), patch("power_herald.schedule.is_emergency", return_value=False), patch(
+            "power_herald.schedule.fetch_outage_data", return_value={"emergency": {"enabled": True}}
+        ), patch("power_herald.schedule.Bot", return_value=bot), patch(
+            "power_herald.schedule.broadcast_emergency", new_callable=AsyncMock
+        ) as broadcast, patch("power_herald.schedule.send_messages", new_callable=AsyncMock):
+            await update_once()
+            with sessionmaker(bind=engine)() as session:
+                session.delete(session.query(OutageGroup).one())
+                session.query(Outage).delete()
+                session.commit()
+            await update_once()
+            await update_once()
+        self.assertEqual(broadcast.await_args_list, [call(bot, True), call(bot, False)])
+
+    async def test_failed_emergency_broadcast_is_retried(self):
+        engine = create_engine("sqlite://")
+        self.addCleanup(engine.dispose)
+        self.seed_groups(engine, [OutageGroup(external_id="1", name="first", districts=[])])
+        config = Mock(db_url="sqlite://", db_engine_options={}, outage_data_source="file", bot_token="token")
+        config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
+        bot = Mock()
+        bot.session.close = AsyncMock()
+        with patch("power_herald.schedule.config", config), patch(
+            "power_herald.schedule.create_engine", return_value=engine
+        ), patch("power_herald.schedule.is_emergency", return_value=False), patch(
+            "power_herald.schedule.fetch_outage_data", return_value={"emergency": {"enabled": True}}
+        ), patch("power_herald.schedule.Bot", return_value=bot), patch(
+            "power_herald.schedule.broadcast_emergency", new_callable=AsyncMock,
+            side_effect=[RuntimeError("broadcast failed"), None],
+        ) as broadcast, patch("power_herald.schedule.send_messages", new_callable=AsyncMock):
+            with self.assertRaisesRegex(RuntimeError, "broadcast failed"):
+                await update_once()
+            with sessionmaker(bind=engine)() as session:
+                self.assertEqual(session.query(EmergencyNotification).count(), 0)
+            await update_once()
+            await update_once()
+        self.assertEqual(broadcast.await_args_list, [call(bot, True), call(bot, True)])
+        with sessionmaker(bind=engine)() as session:
+            self.assertEqual([record.state for record in session.query(EmergencyNotification)], [True])
 
     async def test_timed_schedule_skips_emergency_groups(self):
         engine = create_engine("sqlite://")
