@@ -6,7 +6,7 @@ from typing import Any
 
 from aiogram import Bot
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session, joinedload, sessionmaker
 
 from power_herald.config import get_config
 from power_herald.emergency import broadcast_emergency, is_emergency
@@ -226,8 +226,14 @@ async def send_messages(
     try:
         sent_at = config.now()
         with sessionmaker(bind=engine)() as session:
-            chats = session.query(Chat).filter_by(enabled=True).all()
-            logger.warning("Sending %s changed outage messages to %s enabled chats", len(messages), len(chats))
+            chats = (
+                session.query(Chat)
+                .join(OutageGroup, Chat.outage_group_id == OutageGroup.id)
+                .options(joinedload(Chat.outage_group))
+                .filter(Chat.enabled.is_(True))
+                .all()
+            )
+            logger.warning("Sending %s changed outage messages to %s assigned chats", len(messages), len(chats))
             for message in messages:
                 rendered_message = schedule_message_from_json(
                     message,
@@ -238,6 +244,8 @@ async def send_messages(
                 )
                 sent_count = 0
                 for chat in chats:
+                    if chat.outage_group is None or chat.outage_group.name != message["name"]:
+                        continue
                     try:
                         await bot.send_message(
                             chat.chat_id,

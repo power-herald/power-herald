@@ -72,6 +72,15 @@ def parse_districts(value: str) -> list[str]:
     return districts
 
 
+def parse_outage_group_id(value: str) -> int | None:
+    if value.lower() == "null":
+        return None
+    try:
+        return int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("use an outage group ID or null") from error
+
+
 def enum_value(enum_type: type, value: str) -> Any:
     try:
         return enum_type[value.upper()]
@@ -90,7 +99,8 @@ def add_entity_commands(subparsers: Any, name: str, fields: dict[str, dict[str, 
 
     add = actions.add_parser("add")
     for field, options in fields.items():
-        add.add_argument(f"--{field.replace('_', '-')}", required=options.get("required", False), type=options.get("type", str))
+        add.add_argument(f"--{field.replace('_', '-')}", required=options.get("required", False),
+                         type=options.get("type", str), default=options.get("default"))
 
     list_parser = actions.add_parser("list")
     list_parser.add_argument("--json", action="store_true")
@@ -98,7 +108,8 @@ def add_entity_commands(subparsers: Any, name: str, fields: dict[str, dict[str, 
     update = actions.add_parser("update")
     add_common_id(update)
     for field, options in fields.items():
-        update.add_argument(f"--{field.replace('_', '-')}", type=options.get("type", str))
+        update.add_argument(f"--{field.replace('_', '-')}", type=options.get("type", str),
+                            default=options.get("default"))
 
     remove = actions.add_parser("remove")
     add_common_id(remove)
@@ -137,6 +148,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_entity_commands(commands, "chats", {
         "chat_id": {"required": True}, "title": {}, "thread_id": {"type": int},
         "enabled": {"type": int}, "is_private": {"type": int}, "source_id": {"type": int},
+        "outage_group_id": {"type": parse_outage_group_id, "default": argparse.SUPPRESS},
     })
     add_entity_commands(commands, "maintenances", {
         "source_id": {"type": int}, "enabled": {"type": int}, "comment": {},
@@ -222,7 +234,7 @@ def apply_values(record: Any, arguments: argparse.Namespace) -> None:
         if column.name == "id":
             continue
         value = getattr(arguments, column.name, None)
-        if value is not None:
+        if value is not None or (column.name == "outage_group_id" and hasattr(arguments, column.name)):
             if column.name in {"enabled", "is_private", "is_generator"}:
                 value = bool(value)
             setattr(record, column.name, value)
@@ -332,6 +344,9 @@ def run(arguments: argparse.Namespace) -> int:
             elif arguments.action == "add":
                 record = model()
                 apply_values(record, arguments)
+                if model is Chat and record.outage_group_id is not None:
+                    if session.get(OutageGroup, record.outage_group_id) is None:
+                        raise ValueError(f"outage group {record.outage_group_id} was not found")
                 if model is PowerSource:
                     apply_source_type_values(record, arguments)
                 session.add(record)
@@ -342,6 +357,9 @@ def run(arguments: argparse.Namespace) -> int:
                 if record is None:
                     raise ValueError(f"{arguments.command} record {arguments.id} was not found")
                 apply_values(record, arguments)
+                if model is Chat and record.outage_group_id is not None:
+                    if session.get(OutageGroup, record.outage_group_id) is None:
+                        raise ValueError(f"outage group {record.outage_group_id} was not found")
                 if model is PowerSource:
                     apply_source_type_values(record, arguments)
                 session.commit()
@@ -350,6 +368,8 @@ def run(arguments: argparse.Namespace) -> int:
                 record = session.get(model, arguments.id)
                 if record is None:
                     raise ValueError(f"{arguments.command} record {arguments.id} was not found")
+                if model is OutageGroup and session.query(Chat).filter_by(outage_group_id=record.id).first():
+                    raise ValueError(f"outage group {record.id} is assigned to a chat")
                 session.delete(record)
                 session.commit()
                 print(f"Removed {arguments.command} record {arguments.id}.")

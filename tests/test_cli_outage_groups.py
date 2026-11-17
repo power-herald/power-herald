@@ -46,3 +46,32 @@ class OutageGroupCliTests(unittest.TestCase):
             self.assertEqual(invoke("outage-groups", "remove", "1")[0], 0)
             _, output, _ = invoke("outage-groups", "list", "--json")
             self.assertEqual([group["external_id"] for group in json.loads(output)], ["GPV2"])
+
+    def test_chat_outage_group_assignment_and_clearing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db_url = f"sqlite:///{Path(directory) / 'test.db'}"
+
+            def invoke(*args):
+                stdout, stderr = io.StringIO(), io.StringIO()
+                with patch("sys.argv", ["ph-cli", "--db-url", db_url, *args]), \
+                        contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                    result = main()
+                return result, stdout.getvalue(), stderr.getvalue()
+
+            self.assertEqual(invoke("db", "restore")[0], 0)
+            self.assertEqual(invoke("outage-groups", "add", "--external-id", "1", "--name", "First")[0], 0)
+            result, output, _ = invoke("chats", "add", "--chat-id", "123", "--outage-group-id", "1")
+            self.assertEqual(result, 0)
+            self.assertEqual(json.loads(output)["outage_group_id"], 1)
+            result, output, _ = invoke("chats", "update", "1", "--title", "Updated")
+            self.assertEqual(json.loads(output)["outage_group_id"], 1)
+            result, _, error = invoke("outage-groups", "remove", "1")
+            self.assertEqual(result, 2)
+            self.assertIn("assigned to a chat", error)
+            result, _, error = invoke("chats", "update", "1", "--outage-group-id", "999")
+            self.assertEqual(result, 2)
+            self.assertIn("not found", error)
+            result, output, _ = invoke("chats", "update", "1", "--outage-group-id", "null")
+            self.assertEqual(result, 0)
+            self.assertIsNone(json.loads(output)["outage_group_id"])
+            self.assertEqual(invoke("outage-groups", "remove", "1")[0], 0)

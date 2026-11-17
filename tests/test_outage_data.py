@@ -19,10 +19,18 @@ from power_herald.outage_data import (
     is_unspecified,
     prepare_messages,
 )
-from power_herald.schedule import send_schedule_once, update_once
+from power_herald.schedule import send_messages, send_schedule_once, update_once
 
 
 class PrepareMessagesEmergencyTests(unittest.TestCase):
+    def test_duplicate_group_names_are_rejected(self):
+        groups = [
+            OutageGroup(external_id="1", name="same", districts=[]),
+            OutageGroup(external_id="2", name="same", districts=[]),
+        ]
+        with self.assertRaisesRegex(ValueError, "Duplicate outage group name"):
+            prepare_messages({}, groups)
+
     def test_emergency_flags(self):
         groups = [
             OutageGroup(external_id="1", name="first", districts=["Дарницький", "Дарницкого"]),
@@ -95,6 +103,75 @@ class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
         with sessionmaker(bind=engine)() as session:
             session.add_all(groups)
             session.commit()
+
+    async def test_schedule_messages_go_only_to_assigned_enabled_chats(self):
+        engine = create_engine("sqlite://")
+        self.addCleanup(engine.dispose)
+        self.seed_groups(engine, [
+            OutageGroup(external_id="1", name="first", districts=[]),
+            OutageGroup(external_id="2", name="second", districts=[]),
+        ])
+        with sessionmaker(bind=engine)() as session:
+            session.add_all([
+                Chat(chat_id="first", enabled=True, outage_group_id=1, thread_id=42),
+                Chat(chat_id="also-first", enabled=True, outage_group_id=1),
+                Chat(chat_id="second", enabled=True, outage_group_id=2),
+                Chat(chat_id="unassigned", enabled=True),
+                Chat(chat_id="disabled", enabled=False, outage_group_id=1),
+            ])
+            session.commit()
+        config = Mock(db_url="sqlite://", db_engine_options={})
+        config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
+        bot = Mock(send_message=AsyncMock())
+        bot.session.close = AsyncMock()
+        messages = [
+            {"name": "first", "emergency": False},
+            {"name": "second", "emergency": False},
+        ]
+        with patch("power_herald.schedule.config", config), patch(
+            "power_herald.schedule.create_engine", return_value=engine
+        ), patch("power_herald.schedule.Bot", return_value=bot), patch(
+            "power_herald.schedule.schedule_message_from_json",
+            side_effect=lambda message, **kwargs: message["name"],
+        ):
+            await send_messages("token", messages, date=dt.date(2026, 11, 8))
+            self.assertEqual(bot.send_message.await_args_list, [
+                call("first", "first", message_thread_id=42, parse_mode="MarkdownV2"),
+                call("also-first", "first", message_thread_id=None, parse_mode="MarkdownV2"),
+                call("second", "second", message_thread_id=None, parse_mode="MarkdownV2"),
+            ])
+            bot.session.close.assert_awaited_once()
+
+    async def test_update_and_timed_schedule_use_current_chat_assignment(self):
+        engine = create_engine("sqlite://")
+        self.addCleanup(engine.dispose)
+        self.seed_groups(engine, [
+            OutageGroup(external_id="1", name="first", districts=[]),
+            OutageGroup(external_id="2", name="second", districts=[]),
+        ])
+        with sessionmaker(bind=engine)() as session:
+            session.add(Chat(chat_id="chat", enabled=True, outage_group_id=1))
+            session.commit()
+        config = Mock(db_url="sqlite://", db_engine_options={}, outage_data_source="file", bot_token="token")
+        config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
+        bot = Mock(send_message=AsyncMock())
+        bot.session.close = AsyncMock()
+        with patch("power_herald.schedule.config", config), patch(
+            "power_herald.schedule.create_engine", return_value=engine
+        ), patch("power_herald.schedule.is_emergency", return_value=False), patch(
+            "power_herald.schedule.fetch_outage_data", return_value={}
+        ), patch("power_herald.schedule.Bot", return_value=bot), patch(
+            "power_herald.schedule.schedule_message_from_json",
+            side_effect=lambda message, **kwargs: message["name"],
+        ):
+            await update_once()
+            self.assertEqual([item.args[1] for item in bot.send_message.await_args_list], ["first"])
+            with sessionmaker(bind=engine)() as session:
+                session.query(Chat).one().outage_group_id = 2
+                session.commit()
+            bot.send_message.reset_mock()
+            await send_schedule_once(OutageNotificationType.TOMORROW, dt.date(2026, 11, 9))
+            self.assertEqual([item.args[1] for item in bot.send_message.await_args_list], ["second"])
 
     async def test_schedule_reads_updated_groups_from_database(self):
         engine = create_engine("sqlite://")

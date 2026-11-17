@@ -222,6 +222,9 @@ Set `POWER_HERALD_CONFIG` when mounting the configuration at a different path.
 ./ph-cli sources add --name controller-a --type active --secret "CHANGE_ME"
 ./ph-cli group-sources add --group-id 1 --source-id 1
 ./ph-cli group-sources list
+./ph-cli chats add --chat-id 123456789 --outage-group-id 1
+./ph-cli chats update 1 --outage-group-id 1
+./ph-cli chats update 1 --outage-group-id null
 ./ph-cli sources list --json
 ./ph-cli sources update 1 --enabled 0
 ./ph-cli sources remove 1
@@ -236,7 +239,9 @@ Set `POWER_HERALD_CONFIG` when mounting the configuration at a different path.
 The CRUD resources are `groups`, `outage-groups`, `sources`, `group-sources`, `subscriptions`,
 `chats`, and `maintenances`. Use `group-sources` to assign sources to groups;
 source subtype options are accepted on `sources add` and `sources update` and
-are optional. State snapshots, state
+are optional. Assign an outage group by database ID using `--outage-group-id`;
+use `null` to clear it. Only enabled chats with an assigned outage group receive
+that group's schedule. Outage group names must be distinct. State snapshots, state
 changes, and outage periods are list-only and support
 `--source-id`, `--state`, `--from`, `--to`, and `--json` filters.
 `emergencies` is list-only and supports `--enabled`, `--from`,
@@ -399,7 +404,7 @@ entry points, for example `venv/bin/python -m power_herald.bot` or
 - `outage_groups` - Hourly outage groups, feed IDs, and emergency district aliases
 - `outage_notifications` - Schedule notification history, deduplicated by related date and schedule hash across notification types
 - `weekly_statistics_notifications` - Deduplication records for weekly statistics reports
-- `chats` - Telegram chats subscribed to service
+- `chats` - Telegram chats subscribed to service, with an optional outage group
 - `subscriptions` - Chat-to-source mappings
 - `maintenance_modes` - Global or per-source maintenance toggles
 - `emergencies` - History of emergency mode changes

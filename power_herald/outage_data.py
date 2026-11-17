@@ -118,6 +118,8 @@ def prepare_messages(data: dict[str, Any], groups: list[OutageGroup]) -> dict[st
     stabilizing = bool((data.get("stabilizing") or {}).get("enabled"))
     messages: dict[str, dict[str, Any]] = {}
     for group in groups:
+        if group.name in messages:
+            raise ValueError(f"Duplicate outage group name: {group.name}")
         message: dict[str, Any] = {
             "name": group.name,
             "emergency": bool(emergency.get("enabled")) or any(

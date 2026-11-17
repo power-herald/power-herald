@@ -80,6 +80,8 @@ schedule notification records.
 
 ## Sending conditions
 
+- A schedule is sent only to enabled chats assigned to its outage group.
+  Chats without an outage group do not receive schedule messages.
 - `TODAY` is skipped while global emergency mode is active, when every group is
   marked emergency, or when there are no offline or unspecified periods for
   the target day.

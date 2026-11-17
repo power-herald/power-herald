@@ -137,6 +137,8 @@ class Chat(Base):
     is_private: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     source_id: Mapped[int | None] = mapped_column(ForeignKey('power_sources.id'), nullable=True)
     source: Mapped[PowerSource | None] = relationship()
+    outage_group_id: Mapped[int | None] = mapped_column(ForeignKey('outage_groups.id'), nullable=True)
+    outage_group: Mapped[OutageGroup | None] = relationship()
 
 class Subscription(Base):
     __tablename__ = 'subscriptions'

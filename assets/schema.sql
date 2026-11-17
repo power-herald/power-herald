@@ -63,6 +63,15 @@ CREATE TABLE IF NOT EXISTS power_group_sources (
         FOREIGN KEY (source_id) REFERENCES power_sources (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS outage_groups (
+    id INT NOT NULL AUTO_INCREMENT,
+    external_id VARCHAR(128) NOT NULL,
+    name VARCHAR(128) NOT NULL,
+    description TEXT NULL,
+    districts JSON NOT NULL,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS chats (
     id INT NOT NULL AUTO_INCREMENT,
     chat_id VARCHAR(64) NOT NULL,
@@ -71,10 +80,13 @@ CREATE TABLE IF NOT EXISTS chats (
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
     is_private BOOLEAN NOT NULL DEFAULT FALSE,
     source_id INT NULL,
+    outage_group_id INT NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uq_chats_chat_id (chat_id),
     CONSTRAINT fk_chats_source
-        FOREIGN KEY (source_id) REFERENCES power_sources (id)
+        FOREIGN KEY (source_id) REFERENCES power_sources (id),
+    CONSTRAINT fk_chats_outage_group
+        FOREIGN KEY (outage_group_id) REFERENCES outage_groups (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS state_changes (
@@ -136,15 +148,6 @@ CREATE TABLE IF NOT EXISTS emergencies (
     comment TEXT NULL,
     started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ended_at DATETIME NULL,
-    PRIMARY KEY (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS outage_groups (
-    id INT NOT NULL AUTO_INCREMENT,
-    external_id VARCHAR(128) NOT NULL,
-    name VARCHAR(128) NOT NULL,
-    description TEXT NULL,
-    districts JSON NOT NULL,
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
