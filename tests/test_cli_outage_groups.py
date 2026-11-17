@@ -1,0 +1,48 @@
+import contextlib
+import io
+import json
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from power_herald.cli import main
+
+
+class OutageGroupCliTests(unittest.TestCase):
+    def test_crud_and_district_validation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db_url = f"sqlite:///{Path(directory) / 'test.db'}"
+
+            def invoke(*args):
+                stdout, stderr = io.StringIO(), io.StringIO()
+                with patch("sys.argv", ["ph-cli", "--db-url", db_url, *args]), \
+                        contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                    result = main()
+                return result, stdout.getvalue(), stderr.getvalue()
+
+            self.assertEqual(invoke("db", "restore")[0], 0)
+            result, output, _ = invoke(
+                "outage-groups", "add", "--external-id", "GPV38.1",
+                "--name", "Kyiv", "--description", "Example",
+                "--districts", '["Дарницький", "Дарницкого"]',
+            )
+            self.assertEqual(result, 0)
+            self.assertEqual(json.loads(output), {
+                "id": 1, "external_id": "GPV38.1", "name": "Kyiv",
+                "description": "Example", "districts": ["Дарницький", "Дарницкого"],
+            })
+            _, output, _ = invoke("outage-groups", "add", "--external-id", "GPV2", "--name", "Other")
+            self.assertEqual(json.loads(output)["districts"], [])
+            result, output, _ = invoke("outage-groups", "update", "1", "--districts", "[]")
+            self.assertEqual(result, 0)
+            self.assertEqual(json.loads(output)["districts"], [])
+            for value in ('"district"', '["ok", 1]', 'not-json'):
+                with self.subTest(value=value), self.assertRaises(SystemExit) as error:
+                    invoke("outage-groups", "update", "1", "--districts", value)
+                self.assertEqual(error.exception.code, 2)
+            _, output, _ = invoke("outage-groups", "list", "--json")
+            self.assertEqual([group["districts"] for group in json.loads(output)], [[], []])
+            self.assertEqual(invoke("outage-groups", "remove", "1")[0], 0)
+            _, output, _ = invoke("outage-groups", "list", "--json")
+            self.assertEqual([group["external_id"] for group in json.loads(output)], ["GPV2"])

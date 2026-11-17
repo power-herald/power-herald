@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 from power_herald.config import Config
 from power_herald.emergency import broadcast_emergency
 from power_herald.messages import get_message, schedule_message_from_json
-from power_herald.models import Base, Chat, OutageNotification, OutageNotificationType
+from power_herald.models import Base, Chat, OutageGroup, OutageNotification, OutageNotificationType
 from power_herald.outage_data import (
     WEEKDAYS,
     fetch_outage_data,
@@ -25,9 +25,9 @@ from power_herald.schedule import send_schedule_once, update_once
 class PrepareMessagesEmergencyTests(unittest.TestCase):
     def test_emergency_flags(self):
         groups = [
-            {"id": "1", "name": "first", "district": ["Дарницький", "Дарницкого"]},
-            {"id": "2", "name": "second", "district": ["Оболонський"]},
-            {"id": "3", "name": "third"},
+            OutageGroup(external_id="1", name="first", districts=["Дарницький", "Дарницкого"]),
+            OutageGroup(external_id="2", name="second", districts=["Оболонський"]),
+            OutageGroup(external_id="3", name="third", districts=[]),
         ]
         cases = [
             ({"enabled": True, "enabled_districts": None}, [True, True, True]),
@@ -39,11 +39,11 @@ class PrepareMessagesEmergencyTests(unittest.TestCase):
             for emergency, expected in cases:
                 with self.subTest(emergency=emergency):
                     result = prepare_messages({"emergency": emergency}, groups)
-                    self.assertEqual([result[group["name"]]["emergency"] for group in groups], expected)
+                    self.assertEqual([result[group.name]["emergency"] for group in groups], expected)
 
 
 class StabilizingTests(unittest.TestCase):
-    groups = [{"id": "1", "name": "first"}]
+    groups = [OutageGroup(external_id="1", name="first", districts=[])]
     # 2026-11-08 is Sunday, 2026-11-09 is Monday.
     sunday = dt.date(2026, 11, 8)
     monday = dt.date(2026, 11, 9)
@@ -90,12 +90,47 @@ class StabilizingTests(unittest.TestCase):
 
 
 class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
+    def seed_groups(self, engine, groups):
+        Base.metadata.create_all(engine)
+        with sessionmaker(bind=engine)() as session:
+            session.add_all(groups)
+            session.commit()
+
+    async def test_schedule_reads_updated_groups_from_database(self):
+        engine = create_engine("sqlite://")
+        self.addCleanup(engine.dispose)
+        self.seed_groups(engine, [OutageGroup(external_id="old", name="first", districts=[])])
+        config = Mock(db_url="sqlite://", db_engine_options={}, outage_data_source="file", bot_token="token")
+        config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
+        feed = {
+            "preset": {
+                "data": {"new": {"1": {"1": "no"}}},
+                "time_zone": {"1": ["", "00:00", "01:00"]},
+            },
+        }
+        with patch("power_herald.schedule.config", config), patch(
+            "power_herald.schedule.create_engine", return_value=engine
+        ), patch("power_herald.schedule.is_emergency", return_value=False), patch(
+            "power_herald.schedule.fetch_outage_data", return_value=feed
+        ), patch("power_herald.schedule.send_messages", new_callable=AsyncMock) as send:
+            await update_once()
+            with sessionmaker(bind=engine)() as session:
+                group = session.get(OutageGroup, 1)
+                group.external_id = "new"
+                group.name = "updated"
+                session.commit()
+            self.assertTrue(await send_schedule_once(OutageNotificationType.TOMORROW, dt.date(2026, 11, 9)))
+            message = send.await_args.args[1][0]
+            self.assertEqual(message["name"], "updated")
+            self.assertEqual(message["monday"], [{"start": "00:00", "end": "01:00", "status": "offline"}])
+            await update_once()
+            self.assertEqual(send.await_args.args[1][0]["name"], "updated")
+
     async def test_update_checks_tomorrow_hash_even_when_immediate_is_newer(self):
         engine = create_engine("sqlite://")
         self.addCleanup(engine.dispose)
         config = Mock(
             db_url="sqlite://", db_engine_options={}, outage_data_source="file", bot_token="token",
-            gpvs=[{"id": "1", "name": "first"}],
         )
         config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
         messages = [
@@ -140,7 +175,6 @@ class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(engine.dispose)
         config = Mock(
             db_url="sqlite://", db_engine_options={}, outage_data_source="file", bot_token="token",
-            gpvs=[{"id": "1", "name": "first"}],
         )
         config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
         messages = {"first": {
@@ -174,7 +208,6 @@ class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(engine.dispose)
         config = Mock(
             db_url="sqlite://", db_engine_options={}, outage_data_source="file", bot_token="token",
-            gpvs=[{"id": "1", "name": "first"}],
         )
         config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
         messages = [
@@ -218,13 +251,13 @@ class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
     async def test_updates_broadcast_transitions_and_skip_affected_schedules(self):
         engine = create_engine("sqlite://")
         self.addCleanup(engine.dispose)
+        self.seed_groups(engine, [
+            OutageGroup(external_id="1", name="first", districts=["First"]),
+            OutageGroup(external_id="2", name="second", districts=["Second"]),
+        ])
         now = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
         config = Mock(
             db_url="sqlite://", db_engine_options={}, outage_data_source="file", bot_token="token",
-            gpvs=[
-                {"id": "1", "name": "first", "district": ["First"]},
-                {"id": "2", "name": "second", "district": ["Second"]},
-            ],
         )
         config.now.return_value = now
         bot = Mock()
@@ -258,9 +291,9 @@ class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
     async def test_timed_schedule_skips_emergency_groups(self):
         engine = create_engine("sqlite://")
         self.addCleanup(engine.dispose)
+        self.seed_groups(engine, [OutageGroup(external_id="1", name="first", districts=["First"])])
         config = Mock(
             db_url="sqlite://", db_engine_options={}, outage_data_source="file", bot_token="token",
-            gpvs=[{"id": "1", "name": "first", "district": ["First"]}],
         )
         config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
         bot = Mock()
@@ -282,9 +315,9 @@ class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
     async def test_all_clear_resends_unchanged_pre_emergency_schedule(self):
         engine = create_engine("sqlite://")
         self.addCleanup(engine.dispose)
+        self.seed_groups(engine, [OutageGroup(external_id="1", name="first", districts=[])])
         config = Mock(
             db_url="sqlite://", db_engine_options={}, outage_data_source="file", bot_token="token",
-            gpvs=[{"id": "1", "name": "first"}],
         )
         config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
         bot = Mock()
@@ -308,12 +341,12 @@ class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
     async def test_partial_emergency_tomorrow_hash_is_target_day_scoped(self):
         engine = create_engine("sqlite://")
         self.addCleanup(engine.dispose)
+        self.seed_groups(engine, [
+            OutageGroup(external_id="1", name="first", districts=["First"]),
+            OutageGroup(external_id="2", name="second", districts=["Second"]),
+        ])
         config = Mock(
             db_url="sqlite://", db_engine_options={}, outage_data_source="file", bot_token="token",
-            gpvs=[
-                {"id": "1", "name": "first", "district": ["First"]},
-                {"id": "2", "name": "second", "district": ["Second"]},
-            ],
         )
         config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
         bot = Mock()

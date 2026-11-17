@@ -165,6 +165,14 @@ class Emergency(Base):
     )
     ended_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+class OutageGroup(Base):
+    __tablename__ = 'outage_groups'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    external_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    districts: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+
 class OutageData(Base):
     __tablename__ = 'outage_data'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

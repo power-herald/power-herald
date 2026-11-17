@@ -139,6 +139,15 @@ CREATE TABLE IF NOT EXISTS emergencies (
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS outage_groups (
+    id INT NOT NULL AUTO_INCREMENT,
+    external_id VARCHAR(128) NOT NULL,
+    name VARCHAR(128) NOT NULL,
+    description TEXT NULL,
+    districts JSON NOT NULL,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS outage_data (
     id INT NOT NULL AUTO_INCREMENT,
     last_updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -57,11 +57,6 @@ outages:
     tomorrow: "21:00" # Empty string, false, or comment out to disable sending tomorrow's outage notification
   statistic_send_time:
     weekly: "10:00" # Empty string, false, or comment out to disable the weekly outage statistics report (sent every Monday)
-  gpvs:
-    - name: "Kyiv GPV 38.1"
-      id: "GPV38.1"
-      district: ["Дарницький", "Дарницкого"]
-
 maintenance:
   default_enabled: false
   comment: "Scheduled maintenance"

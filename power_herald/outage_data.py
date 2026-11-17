@@ -7,6 +7,7 @@ from typing import Any
 import requests
 
 from power_herald.config import get_config
+from power_herald.models import OutageGroup
 
 def fetch_outage_data(
     url: str | None = None,
@@ -107,7 +108,7 @@ def day_outages(message: dict[str, Any], date: dt.date) -> list[dict[str, Any]]:
     return message.get(weekday_key(date)) or []
 
 
-def prepare_messages(data: dict[str, Any], gpvs: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+def prepare_messages(data: dict[str, Any], groups: list[OutageGroup]) -> dict[str, dict[str, Any]]:
     preset = data.get("preset") or {}
     fact = (data.get("fact") or {}).get("data", {})
     merged = merge_data(preset.get("data") or {}, fact)
@@ -116,22 +117,19 @@ def prepare_messages(data: dict[str, Any], gpvs: list[dict[str, Any]]) -> dict[s
     enabled_districts = emergency.get("enabled_districts") or ""
     stabilizing = bool((data.get("stabilizing") or {}).get("enabled"))
     messages: dict[str, dict[str, Any]] = {}
-    for gpv in gpvs:
-        districts = gpv.get("district") or []
-        if isinstance(districts, str):
-            districts = [districts]
+    for group in groups:
         message: dict[str, Any] = {
-            "name": gpv["name"],
+            "name": group.name,
             "emergency": bool(emergency.get("enabled")) or any(
                 district.casefold() in enabled_districts.casefold()
-                for district in districts if isinstance(district, str) and district
+                for district in group.districts if district
             ),
         }
         unspecified: list[str] = []
         for index, weekday_name in enumerate(WEEKDAYS, start=1):
             weekday = str(index)
             schedule = {
-                "data": {weekday: merged.get(gpv["id"], {}).get(weekday, {})},
+                "data": {weekday: merged.get(group.external_id, {}).get(weekday, {})},
                 "time_zone": time_zone,
             }
             periods = _periods_for_day(schedule, weekday)
@@ -144,7 +142,7 @@ def prepare_messages(data: dict[str, Any], gpvs: list[dict[str, Any]]) -> dict[s
             ]
         if unspecified:
             message["unspecified"] = unspecified
-        messages[gpv["name"]] = message
+        messages[group.name] = message
     return messages
 
 

@@ -32,6 +32,7 @@ from power_herald.models import (
     Subscription,
     OutageNotification,
     OutageNotificationType,
+    OutageGroup,
     WeeklyStatisticsNotification,
 )
 
@@ -43,6 +44,7 @@ ENTITY_MODELS = {
     "subscriptions": Subscription,
     "chats": Chat,
     "maintenances": MaintenanceMode,
+    "outage-groups": OutageGroup,
 }
 
 
@@ -58,6 +60,16 @@ def parse_date(value: str) -> dt.date:
         return dt.date.fromisoformat(value)
     except ValueError as error:
         raise argparse.ArgumentTypeError("use an ISO-8601 date") from error
+
+
+def parse_districts(value: str) -> list[str]:
+    try:
+        districts = json.loads(value)
+    except json.JSONDecodeError as error:
+        raise argparse.ArgumentTypeError("districts must be a JSON array of strings") from error
+    if not isinstance(districts, list) or not all(isinstance(district, str) for district in districts):
+        raise argparse.ArgumentTypeError("districts must be a JSON array of strings")
+    return districts
 
 
 def enum_value(enum_type: type, value: str) -> Any:
@@ -103,6 +115,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     add_entity_commands(commands, "groups", {
         "name": {"required": True}, "description": {},
+    })
+    add_entity_commands(commands, "outage-groups", {
+        "external_id": {"required": True}, "name": {"required": True},
+        "description": {}, "districts": {"type": parse_districts},
     })
     add_entity_commands(commands, "sources", {
         "name": {"required": True}, "type": {"required": True, "type": lambda value: enum_value(PowerSourceType, value)},

@@ -16,6 +16,7 @@ from power_herald.models import (
     Chat,
     Outage,
     OutageData,
+    OutageGroup,
     OutageNotification,
     OutageNotificationType,
 )
@@ -70,12 +71,13 @@ async def update_once(force: bool = False) -> bool:
     data = fetch_outage_data(source=config.outage_data_source)
     current_hash = content_hash(data)
     logger.debug("Fetched outage data with content hash %s", current_hash)
-    prepared_messages = prepare_messages(data, config.gpvs)
-    schedule_hash = _daily_schedule_hash(prepared_messages, today)
     changed_messages: list[dict] = []
     previous_emergency = False
-    current_emergency = any(message["emergency"] for message in prepared_messages.values())
     with sessionmaker(bind=engine)() as session:
+        groups = session.query(OutageGroup).order_by(OutageGroup.id).all()
+        prepared_messages = prepare_messages(data, groups)
+        schedule_hash = _daily_schedule_hash(prepared_messages, today)
+        current_emergency = any(message["emergency"] for message in prepared_messages.values())
         previous = session.query(OutageData).order_by(OutageData.id.desc()).first()
         if previous and previous.content_hash == current_hash:
             logger.info("Outage data content is unchanged")
@@ -162,7 +164,8 @@ async def send_schedule_once(
         if latest is None:
             logger.info("No outage data available; skipping %s outage schedule", notification_type.value)
             return False
-        prepared_messages = prepare_messages(latest.json, config.gpvs)
+        groups = session.query(OutageGroup).order_by(OutageGroup.id).all()
+        prepared_messages = prepare_messages(latest.json, groups)
         schedule_hash = _daily_schedule_hash(prepared_messages, target_date)
         messages = {
             name: message for name, message in prepared_messages.items()

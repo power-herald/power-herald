@@ -271,16 +271,6 @@ class Config:
             raise ValueError("outages.statistic_send_time.weekly must be in HH:MM format") from error
 
     @property
-    def gpvs(self) -> list[dict[str, Any]]:
-        value = self.get("outages.gpvs", [])
-        if not isinstance(value, list):
-            raise ValueError("outages.gpvs must be a list")
-        for gpv in value:
-            if not isinstance(gpv, dict) or not isinstance(gpv.get("name"), str) or not isinstance(gpv.get("id"), str):
-                raise ValueError("each outages.gpvs item must have string name and id")
-        return value
-
-    @property
     def logging_level(self) -> str:
         return self.get("logging.level", "INFO")
 

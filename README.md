@@ -150,11 +150,11 @@ source venv/bin/activate
 pip install -e .
 # Extra driver for MariaDB/MySQL support:
 # pip install -e ".[mariadb]"
-cp config.yaml.example config.yaml
 # Edit config.yaml with your bot token, database settings, webhook URL, etc.
-# For SQLite, set database.driver to sqlite and database.database to a file path.
+# For SQLite, set database.driver to sqlite and database.sqlite.file_path to a file path.
 # The tables are created automatically by the CLI:
 ./ph-cli db restore
+./ph-cli outage-groups add --external-id GPV38.1 --name "Kyiv GPV 38.1" --districts '["Дарницький", "Дарницкого"]'
 # assets/schema.sql is only for MariaDB/MySQL deployments.
 ```
 
@@ -175,13 +175,14 @@ make sequential `ph-cli` calls. For example, create `docker-init.d/10-sources.sh
 if [ ! -e /app/power_herald.db ]; then
   ph-cli db restore
   ph-cli groups add --name "Main buildings" --description "Primary sites"
+  ph-cli outage-groups add --external-id GPV38.1 --name "Kyiv GPV 38.1" --districts '["Дарницький", "Дарницкого"]'
   ph-cli sources add --name grid-a --type passive --address 192.0.2.10 --ping-method ping
   ph-cli group-sources add --group-id 1 --source-id 1
 fi
 ```
 
 This guard uses the default SQLite path. Update `/app/power_herald.db` when
-`database.database` in `config.yaml` uses a different path.
+`database.sqlite.file_path` in `config.yaml` uses a different path.
 
 Mount that directory when starting the container:
 
@@ -202,7 +203,7 @@ retrieve that chat's ID from the container logs. Add the ID to
 Initialization scripts execute each time the container starts, so make them
 idempotent or remove the initialization mount after the first successful
 startup. SQLite state is intentionally ephemeral; mount a writable data volume
-and configure `database.database` with its path only when state must persist.
+and configure `database.sqlite.file_path` with its path only when state must persist.
 Set `POWER_HERALD_CONFIG` when mounting the configuration at a different path.
 
 ### Database CLI
@@ -213,6 +214,10 @@ Set `POWER_HERALD_CONFIG` when mounting the configuration at a different path.
 ```bash
 ./ph-cli db restore
 ./ph-cli groups add --name "Main buildings" --description "Primary sites"
+./ph-cli outage-groups add --external-id GPV38.1 --name "Kyiv GPV 38.1" --districts '["Дарницький", "Дарницкого"]'
+./ph-cli outage-groups list --json
+./ph-cli outage-groups update 1 --districts '["Дарницький"]'
+./ph-cli outage-groups remove 1
 ./ph-cli sources add --name grid-a --type passive --address 192.0.2.10 --ping-method ping
 ./ph-cli sources add --name controller-a --type active --secret "CHANGE_ME"
 ./ph-cli group-sources add --group-id 1 --source-id 1
@@ -228,7 +233,7 @@ Set `POWER_HERALD_CONFIG` when mounting the configuration at a different path.
 ./ph-cli emergencies --enabled 1
 ```
 
-The CRUD resources are `groups`, `sources`, `group-sources`, `subscriptions`,
+The CRUD resources are `groups`, `outage-groups`, `sources`, `group-sources`, `subscriptions`,
 `chats`, and `maintenances`. Use `group-sources` to assign sources to groups;
 source subtype options are accepted on `sources add` and `sources update` and
 are optional. State snapshots, state
@@ -262,21 +267,18 @@ telegram:
 
 database:
   driver: "sqlite"  # or "mysql+pymysql"
-  database: "./power_herald.db"
+  sqlite:
+    file_path: "./power_herald.db"
   # For mysql+pymysql:
-  host: "localhost"
-  user: "power_herald"
-  password: "YOUR_PASSWORD"
-  database: "power_herald"
+  mariadb:
+    host: "localhost"
+    port: 3306
+    user: "power_herald"
+    password: "YOUR_PASSWORD"
+    database: "power_herald"
 
 admin:
   chat_ids: [123456789, 987654321]
-
-outages:
-  gpvs:
-    - name: "Kyiv GPV 37.1"
-      id: "GPV37.1"
-      district: ["Дарницький", "Дарницкого"]
 
 ```
 
@@ -287,7 +289,20 @@ to round calculated generator event times (maintenance start/end and next
 working time) to the nearest interval before they are included in notifications.
 Durations use integer `s`, `m`, or `h` units.
 
-The optional `district` aliases are matched case-insensitively against the outage feed's emergency district text. A global emergency or a matching district triggers the same alert as `/emergency`; an all-clear is sent when no configured group remains affected. Schedules are suppressed for affected groups. Automatic alerts do not change manual emergency mode.
+Create each hourly outage group (GPV) in the database after configuring it:
+
+```bash
+./ph-cli db restore
+./ph-cli outage-groups add --external-id GPV38.1 --name "Kyiv GPV 38.1" \
+  --description "Example group" --districts '["Дарницький", "Дарницкого"]'
+```
+
+The external ID is the group key in the outage JSON. `--districts` is an optional
+JSON array of aliases (default `[]`), matched case-insensitively against the feed's
+emergency district text. A global emergency or matching district triggers the
+same alert as `/emergency`; an all-clear is sent when no group remains affected.
+Schedules are suppressed for affected groups. Automatic alerts do not change
+manual emergency mode. Changes to database groups take effect on the next run.
 
 ### Outage Data Sources
 
@@ -381,6 +396,7 @@ entry points, for example `venv/bin/python -m power_herald.bot` or
 - `active_sources` - Optional active-probe secrets mapped to power sources
 - `state_changes` - State transitions (online/offline)
 - `periods` - Online/offline source state periods with start/stop timestamps
+- `outage_groups` - Hourly outage groups, feed IDs, and emergency district aliases
 - `outage_notifications` - Schedule notification history, deduplicated by related date and schedule hash across notification types
 - `weekly_statistics_notifications` - Deduplication records for weekly statistics reports
 - `chats` - Telegram chats subscribed to service
