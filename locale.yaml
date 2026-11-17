@@ -93,14 +93,14 @@ schedule:
   no_outages_tomorrow: "❎ Без відключень на завтра.\n{name}, {date}."
   unspecified_today: "⚠️ Діють стабілізаційні відключення.\n{name}, {date}."
   unspecified_tomorrow: "⚠️ Діють стабілізаційні відключення.\n{name}, {date}."
-  summary: "\nЗагалом:\n○ {total_offline} без світла,\n● {total_online} зі світлом."
+  summary: "\nЗагалом:\n○ {total_offline} без світла,\n◉ {total_online} зі світлом."
 
 weekly_stats:
   title: "📊 Тижневий звіт\n{week_start} - {week_end}\n\n{source_name}, час відключень:\n"
   summary: "\nЗагалом:\n○ {total_duration} без світла"
   weekdays: ["Пн", "Вв", "Ср", "Чт", "Пт", "Сб", "Нд"]
   chart:
-    online: "●"
+    online: "◉"
     offline: "○"
     mixed: "◎"
     begin: " "
