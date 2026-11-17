@@ -161,12 +161,14 @@ CREATE TABLE IF NOT EXISTS outage_data (
 
 CREATE TABLE IF NOT EXISTS outages (
     id INT NOT NULL AUTO_INCREMENT,
-    name VARCHAR(128) NOT NULL,
+    outage_group_id INT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     message_hash VARCHAR(64) NOT NULL,
     message JSON NOT NULL,
     PRIMARY KEY (id),
-    KEY ix_outages_name_id (name, id)
+    KEY ix_outages_outage_group_id_id (outage_group_id, id),
+    CONSTRAINT fk_outages_outage_group
+        FOREIGN KEY (outage_group_id) REFERENCES outage_groups (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS outage_notifications (

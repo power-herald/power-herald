@@ -186,13 +186,17 @@ class OutageData(Base):
 
 class Outage(Base):
     __tablename__ = 'outages'
+    __table_args__ = (
+        Index('ix_outages_outage_group_id_id', 'outage_group_id', 'id'),
+    )
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    outage_group_id: Mapped[int] = mapped_column(ForeignKey('outage_groups.id'), nullable=False)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     message_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     message: Mapped[dict] = mapped_column(JSON, nullable=False)
+    outage_group: Mapped[OutageGroup] = relationship()
 
 class OutageNotificationType(enum.Enum):
     TODAY = "today"

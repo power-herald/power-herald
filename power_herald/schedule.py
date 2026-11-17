@@ -95,16 +95,22 @@ async def update_once(force: bool = False) -> bool:
             session.add(OutageData(content_hash=current_hash, json=data))
         prepared_count = 0
         outage_count = 0
-        for name, message in prepared_messages.items():
+        for message in prepared_messages.values():
             prepared_count += 1
             outage_count += len(day_outages(message, today))
             current_message_hash = message_hash(message)
-            latest = session.query(Outage).filter_by(name=name).order_by(Outage.id.desc()).first()
+            latest = session.query(Outage).filter_by(
+                outage_group_id=message["outage_group_id"]
+            ).order_by(Outage.id.desc()).first()
             if latest and latest.message_hash == current_message_hash:
                 if not force:
                     continue
             else:
-                session.add(Outage(name=name, message_hash=current_message_hash, message=message))
+                session.add(Outage(
+                    outage_group_id=message["outage_group_id"],
+                    message_hash=current_message_hash,
+                    message=message,
+                ))
             changed_messages.append(message)
         latest_notifications = [
             _latest_notification(session, notification_type, today)
@@ -249,7 +255,7 @@ async def send_messages(
                 )
                 sent_count = 0
                 for chat in chats:
-                    if chat.outage_group is None or chat.outage_group.name != message["name"]:
+                    if chat.outage_group_id != message["outage_group_id"]:
                         continue
                     try:
                         await bot.send_message(

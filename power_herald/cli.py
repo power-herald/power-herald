@@ -31,6 +31,7 @@ from power_herald.models import (
     StateChange,
     StateChangeType,
     Subscription,
+    Outage,
     OutageNotification,
     OutageNotificationType,
     OutageGroup,
@@ -381,6 +382,10 @@ def run(arguments: argparse.Namespace) -> int:
                     raise ValueError(f"{arguments.command} record {arguments.id} was not found")
                 if model is OutageGroup and session.query(Chat).filter_by(outage_group_id=record.id).first():
                     raise ValueError(f"outage group {record.id} is assigned to a chat")
+                if model is OutageGroup and session.query(Outage).filter_by(
+                    outage_group_id=record.id
+                ).first():
+                    raise ValueError(f"outage group {record.id} has outage records")
                 session.delete(record)
                 session.commit()
                 print(f"Removed {arguments.command} record {arguments.id}.")

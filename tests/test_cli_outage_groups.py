@@ -10,7 +10,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from power_herald.cli import main
-from power_herald.models import EmergencyNotification
+from power_herald.models import EmergencyNotification, Outage
 
 
 class OutageGroupCliTests(unittest.TestCase):
@@ -103,4 +103,17 @@ class OutageGroupCliTests(unittest.TestCase):
             result, output, _ = invoke("chats", "update", "1", "--outage-group-id", "null")
             self.assertEqual(result, 0)
             self.assertIsNone(json.loads(output)["outage_group_id"])
+            engine = create_engine(db_url)
+            self.addCleanup(engine.dispose)
+            with sessionmaker(bind=engine)() as session:
+                session.add(Outage(
+                    outage_group_id=1, message_hash="hash", message={"name": "First"}
+                ))
+                session.commit()
+            result, _, error = invoke("outage-groups", "remove", "1")
+            self.assertEqual(result, 2)
+            self.assertIn("has outage records", error)
+            with sessionmaker(bind=engine)() as session:
+                session.query(Outage).delete()
+                session.commit()
             self.assertEqual(invoke("outage-groups", "remove", "1")[0], 0)

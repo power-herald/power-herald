@@ -409,6 +409,7 @@ entry points, for example `venv/bin/python -m power_herald.bot` or
 - `state_changes` - State transitions (online/offline)
 - `periods` - Online/offline source state periods with start/stop timestamps
 - `outage_groups` - Hourly outage groups, feed IDs, and emergency district aliases
+- `outages` - Schedule snapshots associated with an outage group by its database ID
 - `outage_notifications` - Schedule notification history, deduplicated by related date and schedule hash across notification types
 - `emergency_notifications` - Automatic emergency broadcast history and previous state
 - `weekly_statistics_notifications` - Deduplication records for weekly statistics reports

@@ -128,8 +128,8 @@ class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
         bot = Mock(send_message=AsyncMock())
         bot.session.close = AsyncMock()
         messages = [
-            {"name": "first", "emergency": False},
-            {"name": "second", "emergency": False},
+            {"name": "first", "outage_group_id": 1, "emergency": False},
+            {"name": "second", "outage_group_id": 2, "emergency": False},
         ]
         with patch("power_herald.schedule.config", config), patch(
             "power_herald.schedule.create_engine", return_value=engine
@@ -199,6 +199,10 @@ class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
                 group.external_id = "new"
                 group.name = "updated"
                 session.commit()
+            with sessionmaker(bind=engine)() as session:
+                outage = session.query(Outage).order_by(Outage.id.desc()).first()
+                self.assertEqual(outage.outage_group_id, 1)
+                self.assertEqual(outage.outage_group.name, "updated")
             self.assertTrue(await send_schedule_once(OutageNotificationType.TOMORROW, dt.date(2026, 11, 9)))
             message = send.await_args.args[1][0]
             self.assertEqual(message["name"], "updated")
@@ -215,11 +219,11 @@ class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
         config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
         messages = [
             {"first": {
-                "name": "first", "emergency": False,
+                "name": "first", "outage_group_id": 1, "emergency": False,
                 "sunday": [{"start": "00:00", "end": "04:00", "status": "offline"}],
             }},
             {"first": {
-                "name": "first", "emergency": False,
+                "name": "first", "outage_group_id": 1, "emergency": False,
                 "sunday": [{"start": "04:00", "end": "08:00", "status": "offline"}],
             }},
         ]
@@ -258,7 +262,7 @@ class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
         )
         config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
         messages = {"first": {
-            "name": "first", "emergency": False,
+            "name": "first", "outage_group_id": 1, "emergency": False,
             "sunday": [{"start": "00:00", "end": "04:00", "status": "offline"}],
         }}
         with patch("power_herald.schedule.config", config), patch(
@@ -292,17 +296,17 @@ class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
         config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
         messages = [
             {"first": {
-                "name": "first", "emergency": False,
+                "name": "first", "outage_group_id": 1, "emergency": False,
                 "sunday": [{"start": "00:00", "end": "04:00", "status": "offline"}],
                 "monday": [{"start": "00:00", "end": "04:00", "status": "offline"}],
             }},
             {"first": {
-                "name": "first", "emergency": False,
+                "name": "first", "outage_group_id": 1, "emergency": False,
                 "sunday": [{"start": "00:00", "end": "04:00", "status": "offline"}],
                 "monday": [{"start": "04:00", "end": "08:00", "status": "offline"}],
             }},
             {"first": {
-                "name": "first", "emergency": False,
+                "name": "first", "outage_group_id": 1, "emergency": False,
                 "sunday": [{"start": "04:00", "end": "08:00", "status": "offline"}],
                 "monday": [{"start": "04:00", "end": "08:00", "status": "offline"}],
             }},

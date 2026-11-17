@@ -122,6 +122,7 @@ def prepare_messages(data: dict[str, Any], groups: list[OutageGroup]) -> dict[st
             raise ValueError(f"Duplicate outage group name: {group.name}")
         message: dict[str, Any] = {
             "name": group.name,
+            "outage_group_id": group.id,
             "emergency": bool(emergency.get("enabled")) or any(
                 district.casefold() in enabled_districts.casefold()
                 for district in group.districts if district
