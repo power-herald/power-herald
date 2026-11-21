@@ -122,7 +122,8 @@ async def update_once(force: bool = False) -> bool:
             )
         ]
         if (
-            any(
+            not force
+            and any(
                 notification and notification.schedule_hash == schedule_hash
                 for notification in latest_notifications
             )

@@ -73,6 +73,9 @@ Duplicate checks compare hashes for the same target date. A matching hash
 suppresses a send; a different hash allows the changed daily schedule to be
 sent. Immediate updates also require the overall emergency state to be
 unchanged before the duplicate check suppresses their schedule messages.
+The admin command `/publish_schedule` forces an immediate publication even
+when the schedule and notification hashes are unchanged. It still skips
+emergency groups and respects global emergency mode.
 
 A notification record is added after a non-empty schedule batch is passed to
 `send_messages`. Emergency broadcasts are handled separately from these

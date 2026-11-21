@@ -352,7 +352,7 @@ The API source sends `Authorization: token github_pat_YOUR_TOKEN_HERE`. Use a to
 - `/approve <chat_id>` - Approve chat activation (admin only)
 - `/maintenance <source_id|global> <on|off> [comment]` - Toggle maintenance mode
 - `/emergency <on|off> [comment]` - Toggle global emergency mode (disables scheduled-outage features: schedule messages and next outage hints) and notify all enabled chats
-- `/publish_schedule` - Publish the current outage schedule now (admin only)
+- `/publish_schedule` - Publish the current outage schedule now, even if unchanged (admin only)
 - `Start Generator` / `Stop Generator` - Control the generator from an activated chat
 
 ### Power Source Types

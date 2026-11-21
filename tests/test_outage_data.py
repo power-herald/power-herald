@@ -210,6 +210,71 @@ class AutomaticEmergencyTests(unittest.IsolatedAsyncioTestCase):
             await update_once()
             self.assertEqual(send.await_args.args[1][0]["name"], "updated")
 
+    async def test_forced_update_resends_previously_notified_schedule(self):
+        for notification_type in OutageNotificationType:
+            with self.subTest(notification_type=notification_type):
+                engine = create_engine("sqlite://")
+                self.addCleanup(engine.dispose)
+                self.seed_groups(engine, [OutageGroup(external_id="1", name="first", districts=[])])
+                with sessionmaker(bind=engine)() as session:
+                    session.add(Chat(chat_id="chat", enabled=True, outage_group_id=1))
+                    session.commit()
+                config = Mock(
+                    db_url="sqlite://", db_engine_options={}, outage_data_source="file", bot_token="token",
+                )
+                config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
+                bot = Mock(send_message=AsyncMock())
+                bot.session.close = AsyncMock()
+                with patch("power_herald.schedule.config", config), patch(
+                    "power_herald.schedule.create_engine", return_value=engine
+                ), patch("power_herald.schedule.is_emergency", return_value=False), patch(
+                    "power_herald.schedule.fetch_outage_data", return_value={}
+                ), patch("power_herald.schedule.Bot", return_value=bot), patch(
+                    "power_herald.schedule.schedule_message_from_json", return_value="schedule"
+                ):
+                    await update_once()
+                    with sessionmaker(bind=engine)() as session:
+                        session.query(OutageNotification).one().type = notification_type
+                        session.commit()
+                    bot.send_message.reset_mock()
+                    await update_once(force=True)
+                    bot.send_message.assert_awaited_once_with(
+                        "chat", "schedule", message_thread_id=None, parse_mode="MarkdownV2",
+                    )
+                    bot.send_message.reset_mock()
+                    await update_once()
+                    bot.send_message.assert_not_awaited()
+                with sessionmaker(bind=engine)() as session:
+                    self.assertEqual(session.query(Outage).count(), 1)
+                    self.assertEqual(session.query(OutageNotification).count(), 2)
+
+    async def test_forced_update_respects_emergency_conditions(self):
+        engine = create_engine("sqlite://")
+        self.addCleanup(engine.dispose)
+        self.seed_groups(engine, [
+            OutageGroup(external_id="1", name="first", districts=["First"]),
+            OutageGroup(external_id="2", name="second", districts=["Second"]),
+        ])
+        config = Mock(db_url="sqlite://", db_engine_options={}, outage_data_source="file", bot_token="token")
+        config.now.return_value = dt.datetime(2026, 11, 8, 12, tzinfo=dt.timezone.utc)
+        bot = Mock()
+        bot.session.close = AsyncMock()
+        with patch("power_herald.schedule.config", config), patch(
+            "power_herald.schedule.create_engine", return_value=engine
+        ), patch("power_herald.schedule.is_emergency", side_effect=[False, False, True]), patch(
+            "power_herald.schedule.fetch_outage_data",
+            return_value={"emergency": {"enabled_districts": "First"}},
+        ), patch("power_herald.schedule.Bot", return_value=bot), patch(
+            "power_herald.schedule.broadcast_emergency", new_callable=AsyncMock
+        ) as broadcast, patch("power_herald.schedule.send_messages", new_callable=AsyncMock) as send:
+            await update_once()
+            await update_once(force=True)
+            self.assertEqual([message["name"] for message in send.await_args.args[1]], ["second"])
+            self.assertEqual(broadcast.await_count, 1)
+            send.reset_mock()
+            self.assertFalse(await update_once(force=True))
+            send.assert_not_awaited()
+
     async def test_update_checks_tomorrow_hash_even_when_immediate_is_newer(self):
         engine = create_engine("sqlite://")
         self.addCleanup(engine.dispose)
