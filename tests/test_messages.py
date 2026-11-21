@@ -1,7 +1,25 @@
 import datetime as dt
 import unittest
 
-from power_herald.messages import generator_state_change_message, group_state_change_message
+from power_herald.messages import (
+    generator_state_change_message,
+    group_state_change_message,
+    schedule_message,
+)
+
+
+class ScheduleMessageTests(unittest.TestCase):
+    def test_updated_schedule_uses_markdown_v2_bold_markers(self):
+        message = schedule_message(
+            "2026-11-21",
+            [{"start": "08:00", "end": "12:00"}],
+            "group",
+            updated=True,
+            as_of=dt.datetime(2026, 11, 20),
+        )
+
+        self.assertIn("*сьогодні*", message)
+        self.assertNotIn("**сьогодні**", message)
 
 
 class GeneratorStateChangeMessageTests(unittest.TestCase):
