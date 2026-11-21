@@ -61,7 +61,7 @@ notification:
   generator:
     online: "⚠️ Запущено генератор ({source_name})"
     offline: "⚠️ Генератор зупинено ({source_name})"
-    paused: "⏸ Генератор призупинено ({source_name})"
+    paused: "⚠️ Технічна пауза генератора ({source_name})"
     offline_duration: "⏱ Працював: {duration}"
     maintenance_duration: "⏱ Технічна перерва: {duration}"
     maintenance_window: "⏱ Технічна перерва {start} - {end}"

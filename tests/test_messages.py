@@ -16,7 +16,7 @@ class GeneratorStateChangeMessageTests(unittest.TestCase):
 
         self.assertEqual(
             message,
-            "⏸ Генератор призупинено (generator)\n"
+            "⚠️ Технічна пауза генератора (generator)\n"
             "⏱ Технічна перерва: 1 год. 30 хв.\n"
             "⏱ Кінець технічної перерви 12:30",
         )

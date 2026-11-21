@@ -10,6 +10,7 @@ from power_herald.models import Chat, PowerSource, MaintenanceMode, Subscription
 from power_herald.config import get_config
 from power_herald.messages import bot_greeting, get_message
 from power_herald.generator import set_generator_state
+from power_herald.notify import generator_notification_message
 from power_herald.state_store import latest_state
 
 config = get_config()
@@ -428,16 +429,33 @@ async def _generator_state_cmd(
         response_message = get_message("admin.error.not_authorized") if not chat else get_message("admin.error.generator_not_found")
         await message.answer(response_message)
         return
-    changed = await set_generator_state(source.id, state, maintenance_pause=maintenance_pause)
-    if state == StateChangeType.ONLINE:
-        status_key = "generator.started"
-    elif maintenance_pause:
-        status_key = "generator.paused"
-    else:
-        status_key = "generator.stopped"
-    status = get_message(status_key, source_name=source.name) if changed else get_message(
-        "generator.already_in_state", source_name=source.name, state=state.value
+    timestamp = config.now()
+    changed = await set_generator_state(
+        source.id,
+        state,
+        maintenance_pause=maintenance_pause,
+        timestamp=timestamp,
     )
+    if changed:
+        with Session() as session:
+            source = session.query(PowerSource).filter_by(id=source.id).first()
+            if source is None:
+                logger.error("Generator source %s disappeared after its state changed", source_id)
+                await message.answer(get_message("admin.error.generator_not_found"))
+                return
+            status = generator_notification_message(
+                session,
+                source,
+                state,
+                timestamp,
+                maintenance_pause,
+            )
+    else:
+        status = get_message(
+            "generator.already_in_state",
+            source_name=source.name,
+            state=state.value,
+        )
     await message.answer(status, reply_markup=generator_keyboard())
 
 

@@ -19,6 +19,7 @@ async def set_generator_state(
     source_id: int,
     state: StateChangeType,
     maintenance_pause: bool = False,
+    timestamp: datetime.datetime | None = None,
 ) -> bool:
     """Change a generator state and notify subscribed chats."""
     session = Session()
@@ -32,7 +33,7 @@ async def set_generator_state(
     last_state = latest_state(session, source.id, stable_only=True)
 
     if not last_state or last_state.state != state:
-        timestamp = config.now()
+        timestamp = timestamp or config.now()
         _, changed = record_state(session, source.id, state, timestamp)
         if changed:
             record_change(session, source.id, state, timestamp)

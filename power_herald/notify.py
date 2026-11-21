@@ -59,6 +59,60 @@ def next_outage_message(
     return None
 
 
+def generator_notification_message(
+    session,
+    source: PowerSource,
+    state: StateChangeType,
+    timestamp: datetime.datetime,
+    maintenance_pause: bool = False,
+) -> str:
+    maintenance_window = None
+    next_working_window = None
+    maintenance_duration = None
+    if source.generator is not None:
+        if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+            timestamp = timestamp.replace(tzinfo=config.timezone)
+        else:
+            timestamp = timestamp.astimezone(config.timezone)
+        if state == StateChangeType.ONLINE:
+            maint_start = round_datetime_to_interval(
+                timestamp + datetime.timedelta(minutes=source.generator.work_duration_minutes),
+                config.generator_rounding,
+            )
+            maint_end = round_datetime_to_interval(
+                timestamp + datetime.timedelta(
+                    minutes=source.generator.work_duration_minutes
+                    + source.generator.maintenance_duration_minutes
+                ),
+                config.generator_rounding,
+            )
+            maintenance_window = (maint_start.strftime("%H:%M"), maint_end.strftime("%H:%M"))
+        elif state == StateChangeType.OFFLINE and maintenance_pause:
+            maintenance_duration = datetime.timedelta(
+                minutes=source.generator.maintenance_duration_minutes
+            )
+            work_start = round_datetime_to_interval(
+                timestamp + maintenance_duration,
+                config.generator_rounding,
+            )
+            next_working_window = work_start.strftime("%H:%M")
+
+    period = session.query(Period).filter(
+        Period.source_id == source.id,
+        Period.finished_at.isnot(None),
+    ).order_by(Period.started_at.desc()).first()
+    duration = period.finished_at - period.started_at if period and period.finished_at else None
+    return generator_state_change_message(
+        source.name,
+        source.description,
+        state.value,
+        duration,
+        maintenance_window,
+        next_working_window,
+        maintenance_duration,
+    )
+
+
 async def notify_state_change(
     source_id: int,
     state: StateChangeType,
@@ -71,58 +125,25 @@ async def notify_state_change(
         if source is None:
             return
         subs = session.query(Subscription).filter_by(source_id=source.id, enabled=True).all()
-        maintenance_window = None
-        next_working_window = None
-        maintenance_duration = None
-        if source.is_generator and source.generator is not None:
-            if timestamp.tzinfo is None or timestamp.utcoffset() is None:
-                timestamp = timestamp.replace(tzinfo=config.timezone)
-            else:
-                timestamp = timestamp.astimezone(config.timezone)
-            if state == StateChangeType.ONLINE:
-                maint_start = round_datetime_to_interval(
-                    timestamp + datetime.timedelta(minutes=source.generator.work_duration_minutes),
-                    config.generator_rounding,
-                )
-                maint_end = round_datetime_to_interval(
-                    timestamp + datetime.timedelta(
-                        minutes=source.generator.work_duration_minutes
-                        + source.generator.maintenance_duration_minutes
-                    ),
-                    config.generator_rounding,
-                )
-                maintenance_window = (maint_start.strftime("%H:%M"), maint_end.strftime("%H:%M"))
-            elif state == StateChangeType.OFFLINE and maintenance_pause:
-                maintenance_duration = datetime.timedelta(
-                    minutes=source.generator.maintenance_duration_minutes
-                )
-                work_start = round_datetime_to_interval(
-                    timestamp + maintenance_duration,
-                    config.generator_rounding,
-                )
-                next_working_window = work_start.strftime("%H:%M")
+        generator_message = (
+            generator_notification_message(session, source, state, timestamp, maintenance_pause)
+            if source.is_generator
+            else None
+        )
 
         for sub in subs:
             chat = session.query(Chat).filter_by(enabled=True, id=sub.chat_id).first()
             if chat is None or chat.chat_id in config.admin_chat_ids:
                 continue
-            period = session.query(Period).filter(
-                Period.source_id == source.id,
-                Period.finished_at.isnot(None)
-            ).order_by(Period.started_at.desc()).first()
-            duration = period.finished_at - period.started_at if period and period.finished_at else None
             if not source.is_generator:
+                period = session.query(Period).filter(
+                    Period.source_id == source.id,
+                    Period.finished_at.isnot(None)
+                ).order_by(Period.started_at.desc()).first()
+                duration = period.finished_at - period.started_at if period and period.finished_at else None
                 msg = state_change_message(source.name, source.description, state.value, duration)
             else:
-                msg = generator_state_change_message(
-                    source.name,
-                    source.description,
-                    state.value,
-                    duration,
-                    maintenance_window,
-                    next_working_window,
-                    maintenance_duration,
-                )
+                msg = generator_message
             outage_message = next_outage_message(session, source, state, timestamp)
             if outage_message:
                 msg = f"{msg}\n{outage_message}"
