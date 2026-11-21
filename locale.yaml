@@ -51,6 +51,7 @@ generator:
   paused: "⏸ Генератор {source_name} призупинено."
   stopped: "⏹ Генератор {source_name} зупинено."
   already_in_state: "Генератор {source_name} вже {state}."
+  time_to_stop: "За {duration} необхідно зупинити генератор {source_name} на технічну перерву."
 
 notification:
   source:

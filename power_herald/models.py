@@ -140,6 +140,16 @@ class Chat(Base):
     outage_group_id: Mapped[int | None] = mapped_column(ForeignKey('outage_groups.id'), nullable=True)
     outage_group: Mapped[OutageGroup | None] = relationship()
 
+class GeneratorStopNotification(Base):
+    __tablename__ = 'generator_stop_notifications'
+    __table_args__ = (UniqueConstraint('state_change_id', 'chat_id'),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    state_change_id: Mapped[int] = mapped_column(ForeignKey('state_changes.id'), nullable=False)
+    chat_id: Mapped[int] = mapped_column(ForeignKey('chats.id'), nullable=False)
+    posted_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
 class Subscription(Base):
     __tablename__ = 'subscriptions'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

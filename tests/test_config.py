@@ -41,3 +41,18 @@ class GeneratorRoundingTests(unittest.TestCase):
         rounded_timestamp = round_datetime_to_interval(timestamp, 10 * 60)
 
         self.assertEqual(rounded_timestamp, dt.datetime(2026, 1, 2, 0, 0))
+
+
+class GeneratorReminderConfigTests(unittest.TestCase):
+    def test_reminder_is_disabled_by_default_and_accepts_a_duration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "config.yaml"
+            config_path.write_text("{}")
+            self.assertIsNone(Config(str(config_path)).generator_stop_reminder)
+            config_path.write_text("generator:\n  stop_reminder: 15m\n")
+            self.assertEqual(Config(str(config_path)).generator_stop_reminder, 900)
+            config_path.write_text("generator:\n  stop_reminder: false\n")
+            self.assertIsNone(Config(str(config_path)).generator_stop_reminder)
+            config_path.write_text("generator:\n  stop_reminder: invalid\n")
+            with self.assertRaisesRegex(ValueError, "generator.stop_reminder"):
+                Config(str(config_path)).generator_stop_reminder

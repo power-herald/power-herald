@@ -297,6 +297,18 @@ to round calculated generator event times (maintenance start/end and next
 working time) to the nearest interval before they are included in notifications.
 Durations use integer `s`, `m`, or `h` units.
 
+Set `generator.stop_reminder` to a duration such as `15m` to notify enabled
+private chats assigned to a running generator before its rounded maintenance
+start. Set it to `false` or omit it to disable reminders. If a reminder is
+missed during downtime, it is sent with the remaining time if the generator
+is still running and the maintenance start has not passed. Remaining time is
+rounded to the nearest minute, with 30 seconds rounded up. Sent reminders are
+recorded per chat and run; a crash between sending and recording can cause a
+duplicate. Run `./ph-cli db restore` after upgrading to
+create the reminder table in an existing database. Use
+`./ph-cli generator-stop-notifications --json` to inspect sent reminders.
+Custom locale files must define `generator.time_to_stop` as shown in `locale.yaml`.
+
 Create each hourly outage group (GPV) in the database after configuring it:
 
 ```bash

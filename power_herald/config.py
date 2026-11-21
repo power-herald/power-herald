@@ -235,6 +235,13 @@ class Config:
         return parse_duration(self.get("generator.rounding", "10m"), "generator.rounding")
 
     @property
+    def generator_stop_reminder(self) -> int | None:
+        value = self.get("generator.stop_reminder")
+        if value is None or value is False or value == "":
+            return None
+        return parse_duration(value, "generator.stop_reminder")
+
+    @property
     def outage_schedule_send_time_tomorrow(self) -> dt.time | None:
         value = self.get("outages.schedule_send_time.tomorrow")
         if (isinstance(value, str) and value == "" ) or (isinstance(value, bool) and not value):

@@ -99,6 +99,19 @@ CREATE TABLE IF NOT EXISTS state_changes (
         FOREIGN KEY (source_id) REFERENCES power_sources (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS generator_stop_notifications (
+    id INT NOT NULL AUTO_INCREMENT,
+    state_change_id INT NOT NULL,
+    chat_id INT NOT NULL,
+    posted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_generator_stop_notifications (state_change_id, chat_id),
+    CONSTRAINT fk_generator_stop_notifications_state_change
+        FOREIGN KEY (state_change_id) REFERENCES state_changes (id),
+    CONSTRAINT fk_generator_stop_notifications_chat
+        FOREIGN KEY (chat_id) REFERENCES chats (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS source_states (
     id INT NOT NULL AUTO_INCREMENT,
     source_id INT NOT NULL,

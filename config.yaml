@@ -43,6 +43,7 @@ notifications:
 
 generator:
   rounding: 10m
+  stop_reminder: 15m # Notify operators this long before the maintenance break; false disables reminders
 
 outages:
   source: file # url, file, or api

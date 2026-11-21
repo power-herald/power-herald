@@ -6,7 +6,7 @@ import os
 
 from sqlalchemy import create_engine
 
-from power_herald import active_probe, bot, processor, probe, schedule
+from power_herald import active_probe, bot, generator, processor, probe, schedule
 from power_herald.config import get_config
 from power_herald.lifecycle import create_stop_event
 from power_herald.models import Base
@@ -63,13 +63,14 @@ def init_database() -> None:
 async def main() -> None:
     init_database()
     stop_event = create_stop_event()
-    ready_events = [asyncio.Event() for _ in range(5)]
+    ready_events = [asyncio.Event() for _ in range(6)]
     services = [
         asyncio.create_task(bot.main(stop_event, ready_events[0]), name="bot"),
         asyncio.create_task(probe.main(stop_event, ready_events[1]), name="passive-probe"),
         asyncio.create_task(active_probe.main(stop_event, ready_events[2]), name="active-probe"),
         asyncio.create_task(processor.main(stop_event, ready_events[3]), name="processor"),
         asyncio.create_task(schedule.main(stop_event, ready_events[4]), name="schedule"),
+        asyncio.create_task(generator.main(stop_event, ready_events[5]), name="generator-reminders"),
     ]
     try:
         await _wait_until_ready(services, ready_events)
