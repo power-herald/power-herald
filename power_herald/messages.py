@@ -18,7 +18,8 @@ _locale = _load_locale()
 
 def _escape_markdown_v2(value: str) -> str:
     return value.replace("\\", "\\\\").translate(
-        str.maketrans({character: f"\\{character}" for character in "_*[]()~`>#+-=|{}.!"})
+        # Escape all Markdown V2 special characters, except emphasis (*/**)
+        str.maketrans({character: f"\\{character}" for character in "_[]()~`>#+-=|{}.!"})
     )
 
 
