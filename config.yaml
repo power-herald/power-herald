@@ -40,6 +40,7 @@ probing:
 
 notifications:
   track_next_scheduled_outage: true
+  next_scheduled_outage_reminder: 10m
 
 generator:
   rounding: 10m

@@ -36,6 +36,7 @@ from power_herald.models import (
     OutageNotification,
     OutageNotificationType,
     OutageGroup,
+    OutageReminderNotification,
     WeeklyStatisticsNotification,
 )
 
@@ -204,6 +205,15 @@ def build_parser() -> argparse.ArgumentParser:
     generator_notifications.add_argument("--to", dest="to_time", type=parse_datetime)
     generator_notifications.add_argument("--json", action="store_true")
 
+    outage_reminders = commands.add_parser(
+        "outage-reminders", help="list scheduled outage reminders"
+    )
+    outage_reminders.add_argument("--chat-id", type=int)
+    outage_reminders.add_argument("--outage-group-id", type=int)
+    outage_reminders.add_argument("--from", dest="from_time", type=parse_datetime)
+    outage_reminders.add_argument("--to", dest="to_time", type=parse_datetime)
+    outage_reminders.add_argument("--json", action="store_true")
+
     return parser
 
 
@@ -326,6 +336,11 @@ def list_notifications(session: Session, model: Any, arguments: argparse.Namespa
             query = query.filter(model.state_change_id == arguments.state_change_id)
         if arguments.chat_id is not None:
             query = query.filter(model.chat_id == arguments.chat_id)
+    if model is OutageReminderNotification:
+        if arguments.chat_id is not None:
+            query = query.filter(model.chat_id == arguments.chat_id)
+        if arguments.outage_group_id is not None:
+            query = query.filter(model.outage_group_id == arguments.outage_group_id)
     if hasattr(arguments, "source_id") and arguments.source_id is not None:
         query = query.filter(model.source_id == arguments.source_id)
     time_column = WeeklyStatisticsNotification.sent_at if model is WeeklyStatisticsNotification else model.posted_at
@@ -410,7 +425,8 @@ def run(arguments: argparse.Namespace) -> int:
             notification_models = {"outage-notifications": OutageNotification,
                                    "emergency-notifications": EmergencyNotification,
                                    "weekly-notifications": WeeklyStatisticsNotification,
-                                   "generator-stop-notifications": GeneratorStopNotification}
+                                   "generator-stop-notifications": GeneratorStopNotification,
+                                   "outage-reminders": OutageReminderNotification}
             if arguments.command in history_models:
                 output(list_history(session, history_models[arguments.command], arguments), arguments.json)
             elif arguments.command == "emergencies":

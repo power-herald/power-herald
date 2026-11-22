@@ -79,6 +79,7 @@ notification:
   outage:
     next_online: "⏭ З'явиться о {start}"
     next_offline: "⏭ Зникне о {start}"
+    reminder: "⏰ Світло зникне за {duration}, відповідно графіку о {start}."
   emergency:
     enabled: "⚠️ Задіяно екстрені/аварійні відключення. Графіки не діють."
     disabled: "⚠️ Скасовано екстрені/аварійні відключення. Графіки знову діють."

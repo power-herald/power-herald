@@ -194,6 +194,20 @@ CREATE TABLE IF NOT EXISTS outage_notifications (
     KEY ix_outage_notifications_posted_for_hash (posted_for, schedule_hash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS outage_reminder_notifications (
+    id INT NOT NULL AUTO_INCREMENT,
+    chat_id INT NOT NULL,
+    outage_group_id INT NOT NULL,
+    starts_at DATETIME NOT NULL,
+    posted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_outage_reminder_notifications (chat_id, outage_group_id, starts_at),
+    CONSTRAINT fk_outage_reminder_notifications_chat
+        FOREIGN KEY (chat_id) REFERENCES chats (id),
+    CONSTRAINT fk_outage_reminder_notifications_group
+        FOREIGN KEY (outage_group_id) REFERENCES outage_groups (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS emergency_notifications (
     id INT NOT NULL AUTO_INCREMENT,
     posted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

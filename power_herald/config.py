@@ -198,6 +198,13 @@ class Config:
         return self.get("notifications.track_next_scheduled_outage", True)
 
     @property
+    def notifications_next_scheduled_outage_reminder(self) -> int | None:
+        value = self.get("notifications.next_scheduled_outage_reminder")
+        if value is None or value is False or value == "":
+            return None
+        return parse_duration(value, "notifications.next_scheduled_outage_reminder")
+
+    @property
     def outage_json_url(self) -> str:
         return self.get("outages.json_url")
 

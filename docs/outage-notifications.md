@@ -99,3 +99,16 @@ check may send a fresh alert if an emergency is active.
   day has no offline periods.
 - `IMMEDIATE` sends changed non-emergency group schedules. Emergency state
   transitions are broadcast separately.
+
+## Outage reminders
+
+When `notifications.next_scheduled_outage_reminder` is set, enabled chats with
+an outage group receive a reminder within that duration before the next offline
+period in the group's latest saved schedule. Midnight-spanning offline periods
+are treated as one outage. Reminders are skipped in global or group emergency
+mode and on unspecified days. If the service starts late, it sends the remaining
+time before the outage; it does not send reminders after the start. The
+`outage_reminder_notifications` table records successful sends per chat, group,
+and UTC start time, so schedule updates with the same start do not repeat them.
+Telegram failures are logged and retried. A crash after sending but before
+recording can still produce a duplicate.

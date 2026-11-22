@@ -56,3 +56,13 @@ class GeneratorReminderConfigTests(unittest.TestCase):
             config_path.write_text("generator:\n  stop_reminder: invalid\n")
             with self.assertRaisesRegex(ValueError, "generator.stop_reminder"):
                 Config(str(config_path)).generator_stop_reminder
+
+    def test_outage_reminder_configuration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "config.yaml"
+            for value, expected in (("", None), ("false", None), ("10m", 600)):
+                config_path.write_text(f"notifications:\n  next_scheduled_outage_reminder: {value}\n")
+                self.assertEqual(Config(str(config_path)).notifications_next_scheduled_outage_reminder, expected)
+            config_path.write_text("notifications:\n  next_scheduled_outage_reminder: invalid\n")
+            with self.assertRaisesRegex(ValueError, "notifications.next_scheduled_outage_reminder"):
+                Config(str(config_path)).notifications_next_scheduled_outage_reminder

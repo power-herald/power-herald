@@ -226,6 +226,17 @@ class OutageNotification(Base):
     posted_for: Mapped[datetime.date] = mapped_column(Date, nullable=False)
     schedule_hash: Mapped[str] = mapped_column(String(64), nullable=False)
 
+class OutageReminderNotification(Base):
+    __tablename__ = 'outage_reminder_notifications'
+    __table_args__ = (UniqueConstraint('chat_id', 'outage_group_id', 'starts_at'),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    chat_id: Mapped[int] = mapped_column(ForeignKey('chats.id'), nullable=False)
+    outage_group_id: Mapped[int] = mapped_column(ForeignKey('outage_groups.id'), nullable=False)
+    starts_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False)
+    posted_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
 class EmergencyNotification(Base):
     __tablename__ = 'emergency_notifications'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

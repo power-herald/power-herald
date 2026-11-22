@@ -253,6 +253,8 @@ related date, and schedule hash. `immediate` records are created when an
 updated schedule is posted, while `today` and `tomorrow` record scheduled posts.
 `emergency-notifications` lists automatic emergency broadcast attempts and supports
 `--state` (0 or 1), `--from`, `--to`, and `--json`.
+`outage-reminders` lists sent reminders and supports `--chat-id`,
+`--outage-group-id`, `--from`, `--to`, and `--json`.
 
 **OpenRC installation** (see OPENRC_SETUP.md): the ebuild installs the init
 script automatically; just enable and start it:
@@ -296,6 +298,17 @@ Set `generator.rounding` to a duration such as `10m` (default), `30m`, or `1h`
 to round calculated generator event times (maintenance start/end and next
 working time) to the nearest interval before they are included in notifications.
 Durations use integer `s`, `m`, or `h` units.
+
+Set `notifications.next_scheduled_outage_reminder` to a duration such as `10m`
+to remind enabled chats before their assigned outage group's next scheduled
+offline period. Set it to `false` or omit it to disable reminders. Reminders use
+the latest saved schedule, including the next day, and are suppressed during
+global or group emergency mode and for unspecified schedules. A missed reminder
+is sent with the remaining time if the outage has not started. Successful sends
+are recorded per chat, group, and start time; a crash between sending and
+recording can cause a duplicate. Run `./ph-cli db restore` after upgrading to
+create the reminder table. Custom locale files must define
+`notification.outage.reminder` with `{duration}` and `{start}`.
 
 Set `generator.stop_reminder` to a duration such as `15m` to notify enabled
 private chats assigned to a running generator before its rounded maintenance
@@ -423,6 +436,7 @@ entry points, for example `venv/bin/python -m power_herald.bot` or
 - `outage_groups` - Hourly outage groups, feed IDs, and emergency district aliases
 - `outages` - Schedule snapshots associated with an outage group by its database ID
 - `outage_notifications` - Schedule notification history, deduplicated by related date and schedule hash across notification types
+- `outage_reminder_notifications` - Sent scheduled outage reminders, deduplicated per chat, group, and UTC start time
 - `emergency_notifications` - Automatic emergency broadcast history and previous state
 - `weekly_statistics_notifications` - Deduplication records for weekly statistics reports
 - `chats` - Telegram chats subscribed to service, with an optional outage group
