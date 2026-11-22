@@ -273,7 +273,12 @@ def weekly_statistics_message(
             duration=duration,
         )
         lines.append(f"`{_escape_markdown_v2_code(line)}`")
-    total_duration = sum((offline_duration for _, offline_duration in days), datetime.timedelta())
-    summary = get_message("weekly_stats.summary", total_duration=format_duration(total_duration))
+    total_offline = sum((offline_duration for _, offline_duration in days), datetime.timedelta())
+    total_online = datetime.timedelta(days=7) - total_offline
+    summary = get_message(
+        "weekly_stats.summary",
+        total_offline=format_duration(total_offline),
+        total_online=format_duration(total_online),
+    )
     lines.append(_escape_markdown_v2(summary))
     return "\n".join(lines)

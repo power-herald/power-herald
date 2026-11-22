@@ -98,7 +98,7 @@ schedule:
 
 weekly_stats:
   title: "📊 Тижневий звіт\n{week_start} - {week_end}\n\n{source_name}, час відключень:\n"
-  summary: "\nЗагалом:\n○ {total_duration} без світла"
+  summary: "\nЗагалом:\n○ {total_offline} без світла,\n◉ {total_online} зі світлом."
   weekdays: ["Пн", "Вв", "Ср", "Чт", "Пт", "Сб", "Нд"]
   chart:
     online: "◉"

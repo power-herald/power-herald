@@ -5,6 +5,7 @@ from power_herald.messages import (
     generator_state_change_message,
     group_state_change_message,
     schedule_message,
+    weekly_statistics_message,
 )
 
 
@@ -20,6 +21,17 @@ class ScheduleMessageTests(unittest.TestCase):
 
         self.assertIn("*сьогодні*", message)
         self.assertNotIn("**сьогодні**", message)
+
+
+class WeeklyStatisticsMessageTests(unittest.TestCase):
+    def test_summary_reports_online_and_offline_durations(self):
+        days = [([], dt.timedelta()) for _ in range(7)]
+        days[0] = ([], dt.timedelta(hours=1))
+
+        message = weekly_statistics_message("source", "2026-11-16", "2026-11-22", days)
+
+        self.assertIn("○ 1 год\\. без світла,", message)
+        self.assertIn("◉ 6 дн\\. 23 год\\. зі світлом\\.", message)
 
 
 class GeneratorStateChangeMessageTests(unittest.TestCase):
